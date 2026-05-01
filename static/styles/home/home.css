@@ -1,0 +1,363 @@
+/* home.css - главная страница и каталог */
+
+html {
+    background-color: rgb(36, 13, 59);
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    opacity: 0;
+    animation: fadeIn 0.5s ease-in-out forwards;
+    animation-delay: 0.1s;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+body::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    width: calc(100% + 10px);
+    height: calc(100% + 10px);
+    background: url("/assets/images/background.avif") center/cover no-repeat;
+    z-index: -2;
+}
+
+body::after {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    width: calc(100% + 10px);
+    height: calc(100% + 10px);
+    background: rgba(0, 0, 0, 0.7);
+    z-index: -1;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+.MainHeader {
+    position: relative;
+    z-index: 10;
+    padding: 20px;
+    margin-right: 100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.Logo {
+    color: #ffffff;
+    font-family: sans-serif;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.HelpButton {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #cccccc;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.HelpButton:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.MainElements {
+    position: relative;
+    z-index: 5;
+    padding: 20px 40px;
+    color: white;
+    height: calc(100vh - 80px);
+    box-sizing: border-box;
+    display: flex;
+    gap: 60px;
+}
+
+.MainElements-Left {
+    flex: 0 0 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.Name {
+    color: #ffffff;
+    font-family: "Island Moments", cursive, sans-serif;
+    font-size: 150px;
+    margin: 0 0 30px 0;
+    text-align: left;
+}
+
+.Description {
+    color: #cccccc;
+    font-family: sans-serif;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 0 0 50px 0;
+    text-align: left;
+    max-width: 100%;
+}
+
+.MainPhrase {
+    color: #a391ff;
+    font-weight: bold;
+}
+
+.Buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    width: 100%;
+}
+
+.FirstButton {
+    width: 100%;
+    height: 80px;
+    font-size: 54px;
+    font-family: "Pacifico", cursive, sans-serif;
+    border-radius: 12px 36px 12px 36px;
+    background: linear-gradient(135deg, #8279ff, #6a5eff);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.FirstButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(130, 121, 255, 0.4);
+}
+
+.auth-buttons {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.guest-buttons,
+.user-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.Button11, .Button12, .Button21, .Button22 {
+    height: 45px;
+    font-size: 1rem;
+    font-family: sans-serif;
+    border-radius: 8px;
+    background: rgba(44, 36, 161, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    padding: 0 20px;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.Button11:hover, .Button12:hover, .Button21:hover, .Button22:hover {
+    background: rgba(44, 36, 161, 0.5);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.MainElements-Right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 500px;
+}
+
+.Visual {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+#algorithmCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    display: block;
+}
+
+/* Каталог */
+.catalog-container {
+    padding: 40px;
+    color: white;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.catalog-title {
+    font-family: "Island Moments", cursive;
+    font-size: 4rem;
+    margin-bottom: 10px;
+    color: #a391ff;
+}
+
+.algorithms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin: 40px 0;
+}
+
+.algorithm-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.algorithm-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(130, 121, 255, 0.3);
+}
+
+.algorithm-card h3 {
+    color: #a391ff;
+    margin-bottom: 15px;
+    font-size: 1.4rem;
+}
+
+.algorithm-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.algorithm-card li {
+    margin: 10px 0;
+}
+
+.algorithm-card button {
+    background: rgba(106, 94, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.algorithm-card button:hover {
+    background: rgba(106, 94, 255, 0.5);
+    transform: translateX(5px);
+}
+
+.back-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(-5px);
+}
+
+/* Адаптивность главной */
+@media (min-width: 1920px) {
+    .MainElements { gap: 80px; padding: 40px 60px; }
+    .MainElements-Left { flex: 0 0 500px; }
+    .Name { font-size: 180px; }
+    .Description { font-size: 1.4rem; }
+    .FirstButton { height: 120px; font-size: 64px; }
+    .MainElements-Right { min-height: 700px; }
+}
+
+@media (min-width: 1200px) and (max-width: 1919px) {
+    .MainElements { gap: 60px; padding: 20px 40px; }
+    .MainElements-Left { flex: 0 0 400px; }
+    .Name { font-size: 150px; }
+    .Description { font-size: 1.3rem; }
+    .FirstButton { height: 100px; font-size: 54px; }
+    .MainElements-Right { min-height: 500px; }
+}
+
+@media (max-width: 1199px) {
+    body { overflow-y: auto; }
+    .MainElements { flex-direction: column; padding: 20px; gap: 30px; }
+    .MainElements-Left { flex: none; width: 100%; order: 2; }
+    .MainElements-Right { flex: none; width: 100%; order: 1; min-height: 400px; }
+    .Name { font-size: 4rem; text-align: center; margin: 20px 0; }
+    .Description { text-align: center; margin-bottom: 25px; font-size: 1.2rem; }
+    .FirstButton { font-size: 36px; height: 85px; margin-bottom: 15px; }
+    .Visual { height: 400px; }
+}
+
+@media (max-width: 768px) {
+    .MainElements-Right { min-height: 350px; }
+    .Name { font-size: 3.5rem; }
+    .Description { font-size: 1.1rem; }
+    .FirstButton { font-size: 32px; height: 80px; }
+    .Visual { height: 350px; }
+}
+
+@media (max-width: 480px) {
+    .MainHeader { padding: 15px; margin-right: 0; flex-direction: column; gap: 15px; }
+    .header-left { justify-content: center; }
+    .MainElements { padding: 15px; gap: 25px; }
+    .MainElements-Right { min-height: 300px; }
+    .Name { font-size: 2.8rem; margin: 15px 0; }
+    .Description { font-size: 1rem; line-height: 1.5; margin-bottom: 20px; }
+    .FirstButton { font-size: 28px; height: 70px; margin-bottom: 12px; }
+    .Button11, .Button12, .Button21, .Button22 { height: 40px; font-size: 0.9rem; min-width: 140px; }
+    .Visual { height: 300px; }
+}
+
+@media (max-width: 360px) {
+    .MainElements-Right { min-height: 250px; }
+    .Name { font-size: 2.4rem; }
+    .FirstButton { font-size: 24px; height: 60px; }
+    .Visual { height: 250px; }
+    .Button11, .Button12, .Button21, .Button22 { min-width: 120px; font-size: 0.8rem; padding: 0 15px; }
+}

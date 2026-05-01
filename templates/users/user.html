@@ -1,0 +1,88 @@
+{% extends "layouts/base.html" %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/styles/core/core.css">
+<link rel="stylesheet" href="/static/styles/auth/auth.css">
+<link rel="stylesheet" href="/static/styles/admin/admin.css">
+{% endblock %}
+
+{% block content %}
+<div class="add-container">
+    <h1>{{ title }}</h1>
+
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+
+        {% if action == 'edit' %}
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+        {% endif %}
+        
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                {{ form.surname.label }}
+                {{ form.surname(class="form-control", placeholder="Фамилия") }}
+                {% for error in form.surname.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group col-md-6">
+                {{ form.name.label }}
+                {{ form.name(class="form-control", placeholder="Имя") }}
+                {% for error in form.name.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                {{ form.age.label }}
+                {{ form.age(class="form-control", placeholder="Возраст") }}
+                {% for error in form.age.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group col-md-8">
+                {{ form.email.label }}
+                {{ form.email(class="form-control", placeholder="Email") }}
+                {% for error in form.email.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            {{ form.address.label }}
+            {{ form.address(class="form-control", placeholder="Адрес") }}
+            {% for error in form.address.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.roles.label }}
+            {{ form.roles(class="form-control", size=3) }}
+            {% for error in form.roles.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+            <small class="form-text text-muted">Выберите роли (зажмите Ctrl для множественного выбора)</small>
+        </div>
+        
+        <div class="form-group form-check">
+            {{ form.active(class="form-check-input") }}
+            {{ form.active.label(class="form-check-label") }}
+        </div>
+        
+        <div class="form-group" style="display: flex; gap: 10px;">
+            {{ form.submit(class="btn-submit") }}
+            <a href="{{ return_url if return_url else '/' }}" class="btn-cancel">Отмена</a>
+        </div>
+        
+        {% if message %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,508 @@
+/* algorithm.css - стили для страницы визуализации алгоритмов */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #1a0a2e;
+    color: white;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("/assets/images/tree.jpg") center/cover no-repeat;
+    z-index: -2;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+}
+
+.algorithm-container-vertical {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    padding: 0;
+}
+
+/* === Боковая панель === */
+.algo-sidebar {
+    width: 280px;
+    min-width: 80px;
+    max-width: 280px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: width 0.1s ease;
+    overflow-x: hidden;
+}
+
+/* Верхняя секция */
+.sidebar-header {
+    padding: 20px 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s;
+}
+
+.sidebar-logo {
+    color: #ffffff;
+    font-family: sans-serif;
+    font-size: 1.4rem;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.algorithm-title h1 {
+    font-size: 20px;
+    margin: 0;
+    word-break: break-word;
+    white-space: normal;
+    line-height: 1.3;
+}
+
+/* Вкладки */
+.sidebar-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+}
+
+.tab-vertical {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    font-size: 14px;
+    width: 100%;
+}
+
+.tab-vertical:hover {
+    background: rgba(106, 94, 255, 0.3);
+}
+
+.tab-vertical.active {
+    background: #6a5eff;
+    color: white;
+}
+
+.tab-vertical .tab-icon {
+    font-size: 20px;
+}
+
+.tab-text {
+    white-space: nowrap;
+}
+
+/* Кнопки навигации внизу */
+.sidebar-nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    margin-top: auto;
+}
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(106, 94, 255, 0.2);
+    border: 1px solid rgba(106, 94, 255, 0.4);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.nav-btn:hover {
+    background: rgba(106, 94, 255, 0.4);
+}
+
+/* === Основная область === */
+.algo-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 20px;
+}
+
+.visualization-area {
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 12px;
+    padding: 15px;
+    flex: 1;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: auto;
+}
+
+#visualization-container {
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    overflow: visible;
+}
+
+.visualization-element {
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.visualization-element .value {
+    font-weight: bold;
+}
+
+.visualization-element .index {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+/* Панель управления */
+.control-panel {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 12px 15px;
+    flex-shrink: 0;
+    margin-top: 12px;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.control-row:last-child {
+    margin-bottom: 0;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.ctrl-btn {
+    background: rgba(106, 94, 255, 0.2);
+    border: 1px solid rgba(106, 94, 255, 0.4);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.ctrl-btn:hover {
+    background: rgba(106, 94, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.control-slider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.slider-label {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.control-slider input[type="range"] {
+    width: 100px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.2);
+    height: 3px;
+    border-radius: 3px;
+}
+
+.slider-value {
+    font-size: 12px;
+    min-width: 35px;
+    font-family: monospace;
+}
+
+.array-control {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
+.array-control input {
+    flex: 2;
+    min-width: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.array-control input:focus {
+    outline: none;
+    border-color: #6a5eff;
+}
+
+.small-btn {
+    background: rgba(106, 94, 255, 0.3);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.small-btn:hover {
+    background: rgba(106, 94, 255, 0.5);
+}
+
+/* Вкладка описания */
+.description-area {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.info-section {
+    margin-bottom: 20px;
+}
+
+.info-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #6a5eff;
+}
+
+.info-section p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.complexity-badge {
+    display: inline-block;
+    background: rgba(106, 94, 255, 0.3);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    font-family: monospace;
+    color: #ffd93d;
+}
+
+/* Скрытие/показ вкладок */
+.tab-content {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Скролл */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(106, 94, 255, 0.5);
+    border-radius: 3px;
+}
+
+/* === Режим "только иконки" === */
+.algo-sidebar.sidebar-icons {
+    width: 80px;
+}
+
+.algo-sidebar.sidebar-icons .tab-text,
+.algo-sidebar.sidebar-icons .sidebar-logo,
+.algo-sidebar.sidebar-icons .algorithm-title,
+.algo-sidebar.sidebar-icons .nav-btn .btn-text {
+    display: none;
+}
+
+.algo-sidebar.sidebar-icons .sidebar-header {
+    padding: 12px 8px;
+    border-bottom: none;
+}
+
+.algo-sidebar.sidebar-icons .nav-btn {
+    justify-content: center;
+    padding: 12px 8px;
+}
+
+.algo-sidebar.sidebar-icons .nav-btn.back::before {
+    content: "←";
+    font-size: 24px;
+}
+
+.algo-sidebar.sidebar-icons .nav-btn.next::before {
+    content: "→";
+    font-size: 24px;
+}
+
+.algo-sidebar.sidebar-icons .sidebar-tabs {
+    padding: 16px 8px;
+}
+
+.algo-sidebar.sidebar-icons .sidebar-nav-buttons {
+    padding: 16px 8px;
+    gap: 8px;
+}
+
+.algo-sidebar.sidebar-icons .tab-vertical {
+    justify-content: center;
+    padding: 12px 8px;
+    gap: 0;
+}
+
+/* === Ползунок изменения ширины === */
+.resize-handle {
+    width: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    cursor: ew-resize;
+    transition: background 0.2s;
+    position: relative;
+}
+
+.resize-handle:hover {
+    background: #6a5eff;
+}
+
+.resize-handle::after {
+    content: "⋮";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.resize-handle:hover::after {
+    opacity: 0.7;
+}
+
+/* Адаптивность для мобильных (ширина экрана <= 768px) */
+@media (max-width: 768px) {
+    .algo-sidebar {
+        width: 80px;
+    }
+
+    .control-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .array-control {
+        flex-direction: column;
+    }
+
+    .array-control input {
+        width: 100%;
+    }
+
+    .small-btn {
+        width: 100%;
+    }
+}
+
+.input-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+}
+
+.input-field {
+    flex: 1;
+    min-width: 150px;
+}
+
+.input-field label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 4px;
+    color: #ccc;
+}
+
+.input-field input,
+.input-field select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.input-field input:focus {
+    outline: none;
+    border-color: #6a5eff;
+}

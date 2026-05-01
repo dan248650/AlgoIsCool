@@ -1,0 +1,95 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}AlgoIsCool - Главная{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/styles/core/core.css">
+<link rel="stylesheet" href="/static/styles/home/home.css">
+{% endblock %}
+
+{% block header %}
+<div class="MainHeader">
+    <div class="header-left">
+        <p class="Logo">AlgoIsCool</p>
+        <button class="HelpButton" id="helpButton">Как это работает?</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="MainElements">
+    <div class="MainElements-Left">
+        <h1 class="Name">AlgoIsCool</h1>
+        <div class="Body">
+            <p class="Description">
+                <b class="MainPhrase">Настоящее программирование — это искусство.</b>
+                Раскрой его с помощью интерактивных уроков, где каждая строка кода
+                превращается в понятную и элегантную анимацию.
+            </p>
+            <div class="Buttons">
+                <button class="FirstButton" onclick="window.location.href='/algo/catalog'">Начать изучение</button>
+
+                <div class="auth-buttons">
+                    {% if current_user.is_authenticated %}
+                        <div class="user-buttons">
+                            {% if current_user.is_admin() %}
+                                <a href="/admin/dashboard">
+                                    <button class="Button21">Пользователи</button>
+                                </a>
+                            {% endif %}
+                            <a>
+                                <button class="Button21" id="profileBtn">Личный кабинет</button>
+                            </a>
+                            <a href="/logout">
+                                <button class="Button22" id="logoutBtn">Выйти</button>
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="guest-buttons">
+                            <a href="/login">
+                                <button class="Button11" id="loginBtn">Войти</button>
+                            </a>
+                            <a href="/register">
+                                <button class="Button12" id="registerBtn">Зарегистрироваться</button>
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="MainElements-Right">
+        <div class="Visual" id="visualizationCanvas">
+            <canvas id="algorithmCanvas"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+    import { initAnimation } from '/static/js/utils/animation.js';
+
+    async function setupAnimation() {
+        try {
+            const canvas = document.getElementById('algorithmCanvas');
+            if (canvas && canvas.getContext) {
+                await initAnimation();
+            }
+        } catch (error) {
+            console.warn("Animation initialization failed:", error);
+        }
+    }
+
+    document.getElementById('helpButton')?.addEventListener('click', () => {
+        alert("AlgoIsCool - это платформа для визуализации алгоритмов. Каждый алгоритм представлен в виде анимации, что делает обучение наглядным и интересным!");
+    });
+
+    document.getElementById('profileBtn')?.addEventListener('click', () => {
+        alert('Личный кабинет в разработке');
+    });
+
+    setupAnimation();
+</script>
+{% endblock %}
