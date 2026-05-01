@@ -1,0 +1,219 @@
+{% extends "layouts/base.html" %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/styles/core/core.css">
+<link rel="stylesheet" href="/static/styles/auth/auth.css">
+<link rel="stylesheet" href="/static/styles/admin/admin.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-custom">
+    <div class="header-section">
+        <div class="header-content">
+            <div class="logo-title">
+                <h1>AlgoIsCool Admin Panel</h1>
+                <div class="mars-one-label">Admin Dashboard</div>
+            </div>
+            <div class="user-section">
+                <div class="user-menu">
+                    <span class="user-name">{{ current_user.name }} {{ current_user.surname }}</span>
+                    <a href="{{ url_for('user_bp.edit_user', id=current_user.id) }}" class="action">Профиль</a>
+                    <a href="/logout" class="btn-logout">Выйти</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <div class="stats-grid">
+            <!-- Карточка базы данных -->
+            <div class="card">
+                <h2>Database Statistics</h2>
+                <div class="stat-item">
+                    <span class="stat-label">Total Users:</span>
+                    <span class="stat-value">{{ total_users }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Active Users:</span>
+                    <span class="stat-value">{{ active_users }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Admin Users:</span>
+                    <span class="stat-value">{{ admin_users }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Algorithms:</span>
+                    <span class="stat-value">{{ total_algorithms }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Database Size:</span>
+                    <span class="stat-value">{{ (db_size / 1024) | round(2) }} KB</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Database File:</span>
+                    <span class="stat-value">{{ db_path }}</span>
+                </div>
+            </div>
+
+            <!-- Системная информация -->
+            <div class="card">
+                <h2>System Info</h2>
+                <div class="stat-item">
+                    <span class="stat-label">Platform:</span>
+                    <span class="stat-value">{{ system_info.platform[:40] }}...</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Python:</span>
+                    <span class="stat-value">{{ system_info.python_version }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Hostname:</span>
+                    <span class="stat-value">{{ system_info.hostname }}</span>
+                </div>
+            </div>
+
+            <!-- Ресурсы -->
+            <div class="card">
+                <h2>Resource Usage</h2>
+                <div class="stat-item">
+                    <span class="stat-label">Memory Usage:</span>
+                    <span class="stat-value">{{ memory.percent }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ memory.percent }}%"></div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Available RAM:</span>
+                    <span class="stat-value">{{ (memory.available / (1024**3)) | round(2) }} GB</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Disk Usage:</span>
+                    <span class="stat-value">{{ disk.percent }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ disk.percent }}%"></div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Free Disk:</span>
+                    <span class="stat-value">{{ (disk.free / (1024**3)) | round(2) }} GB</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таблицы БД -->
+        <div class="card">
+            <h2>Database Tables</h2>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Row Count</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for table in table_stats %}
+                        <tr>
+                            <td>{{ table.name }}</td>
+                            <td>{{ table.count }}</td>
+                            <td>
+                                <span class="badge {{ 'badge-success' if table.count > 0 else 'badge-warning' }}">
+                                    {{ 'Active' if table.count > 0 else 'Empty' }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Список -->
+        <div class="card">
+            <h2>Алгоритмы</h2>
+            <div style="margin-bottom: 20px; text-align: right;">
+                <a href="{{ url_for('admin_bp.add_algorithm') }}" class="btn btn-add">
+                    <i class="fas fa-plus"></i> algo
+                </a>
+            </div>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Название</th>
+                        <th>Отображаемое имя</th>
+                        <th>Категория</th>
+                        <th>Порядок</th>
+                        <th>Сложность</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for algo in algorithms %}
+                    <tr>
+                        <td>{{ algo.id }}</td>
+                        <td>{{ algo.name }}</td>
+                        <td>{{ algo.display_name or '—' }}</td>
+                        <td>{{ algo.category_id or '—' }}</td>
+                        <td>{{ algo.order_index }}</td>
+                        <td>{{ algo.complexity or '—' }}</td>
+                        <td>
+                            <a href="{{ url_for('admin_bp.edit_algorithm', algorithm_id=algo.id) }}" class="btn-icon btn-edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('admin_bp.delete_algorithm', algorithm_id=algo.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Удалить алгоритм {{ algo.name }}?');">
+                                <button type="submit" class="btn-icon btn-delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h2>Пользователи</h2>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>Фамилия</th>
+                        <th>Email</th>
+                        <th>Активен</th>
+                        <th>Роли</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.surname }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ 'Да' if user.active else 'Нет' }}</td>
+                        <td>{{ user.roles|map(attribute='name')|join(', ') }}</td>
+                        <td>
+                            <a href="{{ url_for('user_bp.edit_user', id=user.id) }}" class="btn-icon btn-edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('user_bp.delete_user', id=user.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Удалить пользователя {{ user.name }}?');">
+                                <button type="submit" class="btn-icon btn-delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div class="footer-section">
+        AlgoIsCool Admin Panel | Server Time: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}
+    </div>
+</div>
+{% endblock %}

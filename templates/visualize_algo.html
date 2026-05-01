@@ -1,0 +1,527 @@
+{# templates/visualize_algo.html #}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlgoIsCool - {{ algorithm.name }}</title>
+    <link rel="stylesheet" href="/static/styles/algorithm/algorithm.css">
+</head>
+<body>
+    <div class="algorithm-container-vertical">
+        <!-- ВЕРТИКАЛЬНОЕ МЕНЮ СЛЕВА -->
+        <div class="algo-sidebar" id="algoSidebar">
+            <!-- Верхняя секция -->
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <a href="/" style="text-decoration: none;">
+                        <p class="sidebar-logo">AlgoIsCool</p>
+                    </a>
+                </div>
+                <div class="algorithm-title">
+                    <h1 id="algoName">{{ algorithm.name }}</h1>
+                </div>
+            </div>
+
+            <!-- Вкладки (центр) -->
+            <div class="sidebar-tabs">
+                <button class="tab-vertical active" data-tab="visualization">
+                    <span class="tab-icon">🎬</span>
+                    <span class="tab-text">Визуализация</span>
+                </button>
+                <button class="tab-vertical" data-tab="description">
+                    <span class="tab-icon">📖</span>
+                    <span class="tab-text">Описание</span>
+                </button>
+            </div>
+
+            <!-- Кнопки навигации (низ) -->
+            <div class="sidebar-nav-buttons">
+                <button class="nav-btn back" id="backButton">
+                    <span class="btn-text">Назад в каталог</span>
+                </button>
+                <button class="nav-btn next" id="nextAlgoBtn">
+                    <span class="btn-text">Далее</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="resize-handle" id="resizeHandle"></div>
+
+        <!-- ОСНОВНОЙ КОНТЕНТ -->
+        <div class="algo-main">
+            <!-- Вкладка визуализации -->
+            <div class="tab-content active" id="visualization-tab">
+                <div id="visualization-area" class="visualization-area">
+                </div>
+
+                <div class="control-panel">
+                    <div class="control-row">
+                        <div class="control-buttons">
+                            <button class="ctrl-btn" id="playBtn" title="Воспроизвести">▶</button>
+                            <button class="ctrl-btn" id="pauseBtn" title="Пауза">⏸</button>
+                            <button class="ctrl-btn" id="resetBtn" title="Сброс">🔄</button>
+                        </div>
+
+                        <div class="control-slider">
+                            <span class="slider-label">⚡</span>
+                            <input type="range" id="speedSlider" min="0.3" max="2.5" step="0.1" value="1.0">
+                            <span id="speedValue" class="slider-value">1.0x</span>
+                        </div>
+
+                        <div class="control-slider">
+                            <span class="slider-label">📏</span>
+                            <input type="range" id="elementSize" min="30" max="90" step="2" value="60">
+                            <span id="elementSizeValue" class="slider-value">60</span>
+                        </div>
+                    </div>
+
+                    <div class="control-row">
+                        <div class="control-slider" style="flex: 1;">
+                            <span class="slider-label">Шаг</span>
+                            <input type="range" id="stepSlider" min="0" max="0" value="0" style="flex: 1;">
+                            <span id="stepValue" class="slider-value">0</span>
+                        </div>
+                    </div>
+
+                    <div class="control-row">
+                        <div id="input-fields-container" class="input-fields"></div>
+                    </div>
+                    <div class="control-row">
+                        <button id="applyArrayBtn" class="small-btn">Применить</button>
+                        <button id="generateRandomBtn" class="small-btn">Случайный</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка описания -->
+            <div class="tab-content" id="description-tab">
+                <div class="description-area">
+                    <div class="info-section">
+                        <h3>Описание</h3>
+                        <p id="fullDescription">Загрузка описания...</p>
+                    </div>
+                    <div class="info-section">
+                        <h3>Сложность</h3>
+                        <div class="complexity-badge" id="complexity">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { ArrayRenderer } from '/static/js/utils/array_renderer.js';
+        import { GraphRenderer } from '/static/js/utils/graph_renderer.js';
+        import { VisualizationPlayer } from '/static/js/utils/player.js';
+        import { InputFormHandler } from '/static/js/utils/input_form_handler.js';
+
+        const algorithmId = '{{ algorithm_id }}';
+        const serverInputData = {{ input_data | safe }};
+
+        let currentAbortController = null;
+        let currentPlayer = null;
+        let currentRenderEngine = null;
+        let algorithmInfo = null;
+
+        let commands = [];
+        let snapshots = [];
+        let snapshotIndexByCommand = [];
+
+        let settings = {
+            speed_factor: 1.0,
+            element_size: 60,
+            spacing: 10
+        };
+
+        let inputData = {
+            input_array: serverInputData.input_array || [64, 34, 25, 12, 22, 11, 90],
+            target: serverInputData.target !== undefined ? serverInputData.target : undefined,
+            nodes: serverInputData.nodes || [],
+            edges: serverInputData.edges || [],
+            directed: serverInputData.directed !== undefined ? serverInputData.directed : false,
+            start_node: serverInputData.start_node !== undefined ? serverInputData.start_node : 0
+        };
+
+        // DOM элементы
+        const container = document.getElementById('visualization-area');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const backBtn = document.getElementById('backButton');
+        const nextBtn = document.getElementById('nextAlgoBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const elementSizeSlider = document.getElementById('elementSize');
+        const applyArrayBtn = document.getElementById('applyArrayBtn');
+        const generateRandomBtn = document.getElementById('generateRandomBtn');
+        const stepSlider = document.getElementById('stepSlider');
+        const stepValue = document.getElementById('stepValue');
+
+        const fullDescriptionEl = document.getElementById('fullDescription');
+        const complexityEl = document.getElementById('complexity');
+
+        let inputFormHandler = null;
+        const inputContainer = document.getElementById('input-fields-container');
+        let isSeeking = false;
+
+        // Новая функция обновления интерфейса на основе данных из БД
+        function updateAlgorithmDisplay(algorithm) {
+            // Заголовок алгоритма
+            const algoNameEl = document.getElementById('algoName');
+            if (algoNameEl) algoNameEl.textContent = algorithm.display_name || algorithm.name;
+
+            // Полное описание
+            if (fullDescriptionEl) {
+                fullDescriptionEl.textContent = algorithm.description_full || 'Описание отсутствует';
+            }
+
+            // Сложность
+            if (complexityEl) {
+                complexityEl.textContent = algorithm.complexity || '—';
+            }
+
+            // Иконка на вкладке (опционально)
+            if (algorithm.icon) {
+                document.title = `${algorithm.icon} AlgoIsCool - ${algorithm.display_name || algorithm.name}`;
+            }
+        }
+
+        // ЗАГРУЖАЕМ ИНФОРМАЦИЮ ОБ АЛГОРИТМЕ С СЕРВЕРА
+        async function loadAlgorithmInfo() {
+            try {
+                const response = await fetch(`/algo/api/algorithm/${algorithmId}`);
+                if (!response.ok) throw new Error('Алгоритм не найден');
+                const algorithm = await response.json();
+                algorithmInfo = algorithm;
+
+                // Обновляем UI
+                updateAlgorithmDisplay(algorithm);
+
+                // Настраиваем форму ввода
+                if (algorithm.input_schema) {
+                    inputFormHandler = new InputFormHandler(inputContainer, algorithm.input_schema, inputData);
+                    const currentData = inputFormHandler.getData();
+                    const needRandom = !currentData.nodes || currentData.nodes.length === 0;
+                    if (needRandom) {
+                        const randomData = inputFormHandler.generateRandom();
+                        Object.assign(inputData, randomData);
+                    }
+                    const schemaKeys = Object.keys(algorithm.input_schema);
+                    const hasData = schemaKeys.some(key =>
+                        inputData[key] !== undefined &&
+                        (Array.isArray(inputData[key]) ? inputData[key].length > 0 : true)
+                    );
+                    if (!hasData) {
+                        const randomData = inputFormHandler.generateRandom();
+                        Object.assign(inputData, randomData);
+                    }
+                    // Переназначаем обработчики кнопок
+                    applyArrayBtn.onclick = () => {
+                        const newData = inputFormHandler.getData();
+                        if (newData) {
+                            Object.assign(inputData, newData);
+                            runVisualization();
+                        }
+                    };
+                    generateRandomBtn.onclick = () => {
+                        const randomData = inputFormHandler.generateRandom();
+                        Object.assign(inputData, randomData);
+                        runVisualization();
+                    };
+                } else {
+                    console.warn('No input_schema for algorithm', algorithm.id);
+                }
+
+                if (algorithm.default_settings) {
+                    settings = { ...algorithm.default_settings };
+                    if (speedSlider) speedSlider.value = settings.speed_factor || 1.0;
+                    if (elementSizeSlider) elementSizeSlider.value = settings.element_size || 60;
+                    document.getElementById('speedValue').textContent = `${settings.speed_factor || 1.0}x`;
+                    document.getElementById('elementSizeValue').textContent = settings.element_size || 60;
+                }
+
+                await runVisualization();
+            } catch (error) {
+                console.error('Failed to load algorithm:', error);
+                showError(error.message);
+            }
+        }
+
+        // Переключение вкладок
+        document.querySelectorAll('.tab-vertical').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = btn.getAttribute('data-tab');
+
+                document.querySelectorAll('.tab-vertical').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    if (content.id === `${tab}-tab`) {
+                        content.classList.add('active');
+                    } else {
+                        content.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        async function runVisualization() {
+            if (!algorithmInfo) return;
+            if (currentAbortController) currentAbortController.abort();
+            if (currentPlayer) { currentPlayer.stop(); currentPlayer = null; }
+            if (currentRenderEngine) { currentRenderEngine.clear(); currentRenderEngine = null; }
+
+            currentAbortController = new AbortController();
+
+            try {
+                const response = await fetch('/algo/api/visualize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        algorithm_id: algorithmId,
+                        input_data: inputData,
+                        settings: settings
+                    }),
+                    signal: currentAbortController.signal
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Ошибка визуализации');
+                }
+
+                const data = await response.json();
+
+                // ========== СОХРАНЯЕМ КОМАНДЫ И СНАПШОТЫ ==========
+                commands = data.commands || [];
+                snapshots = data.snapshots || [];
+
+                // Строим массив: для каждого индекса команды → индекс снапшота (или -1)
+                snapshotIndexByCommand = new Array(commands.length).fill(-1);
+                for (let snapIdx = 0; snapIdx < snapshots.length; snapIdx++) {
+                    const cmdIdx = snapshots[snapIdx].commandIndex;
+                    if (cmdIdx !== undefined && cmdIdx >= 0 && cmdIdx < commands.length) {
+                        snapshotIndexByCommand[cmdIdx] = snapIdx;
+                    }
+                }
+
+                // Настраиваем ползунок (максимум = последняя команда)
+                stepSlider.max = commands.length - 1;
+                stepSlider.value = 0;
+                stepValue.textContent = '0';
+
+                // Создаём рендерер и плеер
+                const snapshotType = snapshots && snapshots.length ? snapshots[0].type : null;
+                let CurrentRendererClass;
+                if (snapshotType === 'graph') {
+                    CurrentRendererClass = GraphRenderer;
+                } else {
+                    CurrentRendererClass = ArrayRenderer; // по умолчанию массив
+                }
+                if (!settings.speed_factor){
+                    settings.speed_factor = speedSlider.value;
+                }
+                if (!settings.element_size){
+                    settings.element_size = parseInt(elementSizeSlider.value, 10);
+                }
+                currentRenderEngine = new CurrentRendererClass('visualization-area');
+                currentRenderEngine.updateSettings({
+                    speedFactor: settings.speed_factor,
+                    elementSize: settings.element_size
+                });
+
+                currentPlayer = new VisualizationPlayer(currentRenderEngine);
+                currentPlayer.onStep = (stepIndex) => {
+                    // stepIndex – номер команды, после выполнения которой мы находимся
+                    if (!isSeeking) {
+                        stepSlider.value = stepIndex;
+                        stepValue.textContent = stepIndex;
+                    }
+                };
+                currentPlayer.setCommands(commands);
+                currentPlayer.play();
+
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                console.error(error);
+                showError(error.message);
+            } finally {
+                currentAbortController = null;
+            }
+        }
+
+        function showError(message) {
+            if (container) {
+                container.innerHTML = `<div style="color: #ff6b6b; padding: 20px; text-align: center;">❌ ${message}</div>`;
+            }
+        }
+
+        // Bind events
+        if (playBtn) playBtn.onclick = () => currentPlayer?.play();
+        if (pauseBtn) pauseBtn.onclick = () => currentPlayer?.pause();
+        if (resetBtn) resetBtn.onclick = () => {
+            runVisualization();
+        };
+
+        if (backBtn) backBtn.onclick = () => {
+            window.location.href = '/algo/catalog';
+        };
+
+        if (nextBtn) {
+            nextBtn.onclick = async () => {
+                try {
+                    const response = await fetch(`/algo/api/algorithm/${algorithmId}/next`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        window.location.href = `/algo/visualize/${data.next_id}`;
+                    } else {
+                        alert('Не удалось найти следующий алгоритм');
+                    }
+                } catch (error) {
+                    console.error('Failed to get next algorithm:', error);
+                    alert('Ошибка при переходе к следующему алгоритму');
+                }
+            };
+        }
+
+        if (speedSlider) {
+            speedSlider.oninput = (e) => {
+                settings.speed_factor = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = `${settings.speed_factor.toFixed(1)}x`;
+                if (currentRenderEngine) {
+                    currentRenderEngine.updateSettings({ speedFactor: settings.speed_factor });
+                }
+            };
+        }
+
+        if (elementSizeSlider) {
+            elementSizeSlider.oninput = (e) => {
+                settings.element_size = parseInt(e.target.value);
+                document.getElementById('elementSizeValue').textContent = settings.element_size;
+                if (currentRenderEngine) {
+                    currentRenderEngine.updateSettings({ elementSize: settings.element_size });
+                }
+                // Не вызываем runVisualization() — размер меняется на лету
+            };
+        }
+
+        stepSlider.addEventListener('input', async (e) => {
+            if (isSeeking) return;
+            isSeeking = true;
+
+            const targetCommand = parseInt(e.target.value);
+            stepValue.textContent = targetCommand;
+
+            // Останавливаем воспроизведение
+            if (currentPlayer) currentPlayer.stop();
+
+            // Находим ближайший снапшот с commandIndex <= targetCommand
+            let snapIdx = -1;
+            for (let cmd = targetCommand; cmd >= 0; cmd--) {
+                if (snapshotIndexByCommand[cmd] !== -1) {
+                    snapIdx = snapshotIndexByCommand[cmd];
+                    break;
+                }
+            }
+
+            if (snapIdx !== -1 && currentRenderEngine) {
+                // Применяем снапшот
+                currentRenderEngine.applySnapshot(snapshots[snapIdx]);
+
+                // Выполняем недостающие команды (от commandIndex+1 до targetCommand) без анимации
+                const startCmd = snapshots[snapIdx].commandIndex + 1;
+                for (let cmdIdx = startCmd; cmdIdx <= targetCommand; cmdIdx++) {
+                    const cmd = commands[cmdIdx];
+                    if (cmd && currentRenderEngine) {
+                        await currentRenderEngine.executeCommand(cmd, true); // skipAnimation = true
+                    }
+                }
+
+                // Синхронизируем индекс плеера
+                if (currentPlayer) currentPlayer.currentIndex = targetCommand + 1;
+            }
+
+            isSeeking = false;
+        });
+
+        // Ресайз панели с двумя режимами и "прилипанием"
+        const sidebar = document.getElementById('algoSidebar');
+        const handle = document.getElementById('resizeHandle');
+        let startX = 0, startWidth = 0;
+        let isResizing = false;
+
+        const ICON_MODE_THRESHOLD = 200;
+        const MODE_FULL_WIDTH = 280;
+        const MODE_ICON_WIDTH = 80;
+
+        function setSidebarMode(width) {
+            // Принудительно ограничиваем
+            let newWidth = Math.min(280, Math.max(MODE_ICON_WIDTH, width));
+            sidebar.style.width = newWidth + 'px';
+
+            // Определяем, нужно ли включить режим иконок
+            if (newWidth <= ICON_MODE_THRESHOLD) {
+                sidebar.classList.add('sidebar-icons');
+            } else {
+                sidebar.classList.remove('sidebar-icons');
+            }
+            localStorage.setItem('sidebarWidth', newWidth);
+        }
+
+        if (handle) {
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = sidebar.offsetWidth;
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'ew-resize';
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+
+        function onMouseMove(e) {
+            if (!isResizing) return;
+            const delta = e.clientX - startX;
+            let newWidth = startWidth + delta;
+            // Ограничиваем, но без скачков
+            newWidth = Math.min(350, Math.max(MODE_ICON_WIDTH, newWidth));
+            setSidebarMode(newWidth);
+            if (currentRenderEngine){
+                currentRenderEngine.updateLayout();
+            }
+        }
+
+        function onMouseUp() {
+            isResizing = false;
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        // Двойной клик по ползунку – переключение между 280 и 80
+        if (handle) {
+            handle.addEventListener('dblclick', () => {
+                let currentWidth = sidebar.offsetWidth;
+                let newWidth = (currentWidth === MODE_FULL_WIDTH) ? MODE_ICON_WIDTH : MODE_FULL_WIDTH;
+                setSidebarMode(newWidth);
+                if (currentRenderEngine){
+                    setTimeout(() => currentRenderEngine.updateLayout(), 100);
+                }
+            });
+        }
+
+        // Восстановить сохранённую ширину
+        const savedWidth = localStorage.getItem('sidebarWidth');
+        if (savedWidth !== null) {
+            setSidebarMode(parseInt(savedWidth));
+        } else {
+            setSidebarMode(MODE_FULL_WIDTH);
+        }
+
+        // Запуск
+        loadAlgorithmInfo();
+    </script>
+</body>
+</html>
