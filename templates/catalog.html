@@ -1,0 +1,67 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}AlgoIsCool - Каталог алгоритмов{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/styles/core/core.css">
+<link rel="stylesheet" href="/static/styles/home/home.css">
+{% endblock %}
+
+{% block header %}
+<div class="MainHeader">
+    <div class="header-left">
+        <a href="/" style="text-decoration: none;">
+            <p class="Logo">AlgoIsCool</p>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="catalog-container">
+    <div class="catalog-header">
+        <h1 class="catalog-title">Каталог алгоритмов</h1>
+        <p>Выберите алгоритм для изучения</p>
+    </div>
+
+    <div class="algorithms-grid">
+        {% for cat_key, category in categories.items() %}
+            {% if category.algorithms %}
+            <div class="algorithm-card" data-algorithm="{{ cat_key }}">
+                <h3>{{ category.name }}</h3>
+                <ul>
+                    {% for algo in category.algorithms %}
+                    <li>
+                        <button class="algo-button" data-algo="{{ algo.id }}">
+                            {{ algo.name }}
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="catalog-actions">
+        <button class="back-button" id="backToHome">
+            ← Назад на главную
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.algo-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const algoId = button.getAttribute('data-algo');
+            window.location.href = `/algo/visualize/${algoId}`;
+        });
+    });
+
+    document.getElementById('backToHome')?.addEventListener('click', () => {
+        window.location.href = '/';
+    });
+</script>
+{% endblock %}

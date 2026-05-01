@@ -1,0 +1,8 @@
+Flask
+Flask-SQLAlchemy
+Flask-Security
+sqlalchemy-serializer
+Flask-WTF
+WTForms
+python-igraph
+psutil

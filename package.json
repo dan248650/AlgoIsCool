@@ -1,0 +1,24 @@
+{
+  "name": "algo-is-cool",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Professional Algorithm Visualization",
+  "main": "server.py",
+  "scripts": {
+    "start": "python server.py",
+    "dev": "python server.py",
+    "build": "echo 'No build process required for this project'",
+    "test": "echo 'No tests yet'",
+    "clean": "echo 'No node_modules to clean'"
+  },
+  "keywords": [
+    "algorithms",
+    "visualization",
+    "education"
+  ],
+  "author": "Daniel daniel.dan.pavlov@gmail.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dan248650/AlgoIsCool"
+  }
+}

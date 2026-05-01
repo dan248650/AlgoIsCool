@@ -1,0 +1,83 @@
+{% extends "layouts/base.html" %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/styles/core/core.css">
+<link rel="stylesheet" href="/static/styles/auth/auth.css">
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <h1>Регистрация</h1>
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(class="form-control", type="email", placeholder="Введите email") }}
+            {% for error in form.email.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.password.label }}
+            {{ form.password(class="form-control", type="password", placeholder="Введите пароль") }}
+            {% for error in form.password.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.password_again.label }}
+            {{ form.password_again(class="form-control", type="password", placeholder="Повторите пароль") }}
+            {% for error in form.password_again.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.surname.label }}
+            {{ form.surname(class="form-control", placeholder="Введите фамилию") }}
+            {% for error in form.surname.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.name.label }}
+            {{ form.name(class="form-control", placeholder="Введите имя") }}
+            {% for error in form.name.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.age.label }}
+            {{ form.age(class="form-control", type="number", placeholder="Введите возраст") }}
+            {% for error in form.age.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.address.label }}
+            {{ form.address(class="form-control", placeholder="Введите адрес") }}
+            {% for error in form.address.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.submit(class="btn-submit") }}
+        </div>
+
+        <div class="links">
+            <a href="/login" class="register-link">Уже есть аккаунт? Войдите</a>
+        </div>
+
+        {% if message %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

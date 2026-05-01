@@ -1,0 +1,18 @@
+{% extends "layouts/base.html" %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/styles/core/core.css">
+<link rel="stylesheet" href="/static/styles/auth/auth.css">
+{% endblock %}
+
+{% block content %}
+<div class="login-container" style="max-width: 500px; margin: 80px auto;">
+    <div class="alert alert-danger" style="text-align: center;">
+        <h3>Ошибка</h3>
+        <p>{{ error }}</p>
+    </div>
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="/" class="btn-submit" style="display: inline-block; width: auto; padding: 10px 30px;">Вернуться на главную</a>
+    </div>
+</div>
+{% endblock %}

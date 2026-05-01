@@ -1,0 +1,150 @@
+{% extends "layouts/base.html" %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/styles/core/core.css">
+<link rel="stylesheet" href="/static/styles/auth/auth.css">
+<link rel="stylesheet" href="/static/styles/admin/admin.css">
+{% endblock %}
+
+{% block content %}
+<div class="add-container">
+    <h1>{{ title }}</h1>
+
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+
+        {% if return_url %}
+            <input type="hidden" name="return_url" value="{{ return_url }}">
+        {% endif %}
+
+        {% if action == 'edit' %}
+            <input type="hidden" name="algorithm_id" value="{{ algorithm_id }}">
+        {% endif %}
+
+        <!-- Основная информация -->
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                {{ form.name.label }} *
+                {{ form.name(class="form-control", placeholder="linear-search") }}
+                {% for error in form.name.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+                <small class="form-text text-muted">Уникальный идентификатор (латиница, дефисы)</small>
+            </div>
+            <div class="form-group col-md-6">
+                {{ form.display_name.label }}
+                {{ form.display_name(class="form-control", placeholder="Линейный поиск") }}
+                {% for error in form.display_name.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                {{ form.category_id.label }}
+                {{ form.category_id(class="form-control", placeholder="sorting / search / graph") }}
+                {% for error in form.category_id.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div class="form-group col-md-4">
+                {{ form.order_index.label }}
+                {{ form.order_index(class="form-control", placeholder="10") }}
+                {% for error in form.order_index.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            {{ form.description_short.label }}
+            {{ form.description_short(class="form-control", placeholder="Последовательный перебор элементов") }}
+            {% for error in form.description_short.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.description_full.label }}
+            {{ form.description_full(class="form-control", rows="3", placeholder="Подробное описание...") }}
+            {% for error in form.description_full.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.complexity.label }}
+            {{ form.complexity(class="form-control", placeholder="O(n)") }}
+            {% for error in form.complexity.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <!-- Definition -->
+        <h3>Definition (структура алгоритма)</h3>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                {{ form.definition_type.label }} *
+                {{ form.definition_type(class="form-control") }}
+                {% for error in form.definition_type.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            {{ form.definition_initial_state.label }}
+            {{ form.definition_initial_state(class="form-control", rows="3", placeholder='{"array": "input_array", "n": "length(input_array)"}') }}
+            {% for error in form.definition_initial_state.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+            <small class="form-text text-muted">JSON-объект с начальными переменными</small>
+        </div>
+
+        <div class="form-group">
+            {{ form.definition_steps.label }} *
+            {{ form.definition_steps(class="form-control", rows="8", placeholder='[\n  {\n    "name": "Создание элементов",\n    "commands": [\n      {"component": "create_elements", "params": {"array": "array"}}\n    ]\n  }\n]') }}
+            {% for error in form.definition_steps.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+            <small class="form-text text-muted">Массив шагов в формате JSON</small>
+        </div>
+
+        <!-- Остальные JSON -->
+        <div class="form-group">
+            {{ form.input_schema.label }}
+            {{ form.input_schema(class="form-control", rows="3", placeholder='{"input_array": "array", "target": "number"}') }}
+            {% for error in form.input_schema.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.default_settings.label }}
+            {{ form.default_settings(class="form-control", rows="3", placeholder='{"speed_factor": 1.0, "colors": {"current": "#FFA07A"}}') }}
+            {% for error in form.default_settings.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.default_input_data.label }}
+            {{ form.default_input_data(class="form-control", rows="3", placeholder='{"input_array": [64, 34, 25, 12], "target": 22}') }}
+            {% for error in form.default_input_data.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <!-- Кнопки -->
+        <div class="form-group" style="display: flex; gap: 10px;">
+            {{ form.submit(class="btn-submit") }}
+            <a href="{{ return_url if return_url else url_for('admin_bp.admin_dashboard') }}" class="btn-cancel">Отмена</a>
+        </div>
+
+        {% if message %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
