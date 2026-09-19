@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, flash, request, abort
+from flask import Blueprint, render_template, redirect, flash, request, abort, jsonify
 from utils.auth import login_required
 from data.db import db
 from data.__all_models import User, Role
@@ -28,6 +28,7 @@ def edit_user(id):
         form.age.data = user.age
         form.address.data = user.address
         form.email.data = user.email
+        form.background_image.data = user.get_settings()['background_image']
         form.roles.data = [r.id for r in user.roles]
         form.active.data = user.active
 
@@ -50,6 +51,7 @@ def edit_user(id):
         user.age = form.age.data
         user.address = form.address.data
         user.email = form.email.data
+        user.update_settings(background_image=form.background_image.data)
         user.active = form.active.data
 
         if current_user.is_admin() and form.roles.data:
@@ -130,3 +132,20 @@ def change_password(id):
                            title='Изменение пароля',
                            form=form,
                            user_id=id)
+
+
+@user_bp.route('/update_settings', methods=['POST'])
+@login_required
+def update_settings():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+
+    allowed_keys = set(User.DEFAULT_SETTINGS.keys())
+    clean = {k: v for k, v in data.items() if k in allowed_keys}
+    if not clean:
+        return jsonify({'error': 'No valid keys'}), 400
+
+    current_user.update_settings(**clean)
+    db.session.commit()
+    return jsonify({'success': True, 'settings': current_user.get_settings()})

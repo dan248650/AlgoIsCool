@@ -56,7 +56,6 @@ body::after {
     position: relative;
     z-index: 10;
     padding: 20px;
-    margin-right: 100px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -93,6 +92,68 @@ body::after {
     border-color: rgba(255, 255, 255, 0.6);
     color: #ffffff;
     background: rgba(255, 255, 255, 0.1);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+.settings-dropdown {
+    position: relative;
+}
+
+.settings-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding-bottom: 4px;
+    border-radius: 32px;
+    transition: transform 0.3s ease;
+}
+.settings-btn:hover {
+    transform: rotate(45deg);
+}
+.settings-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: rgba(30, 20, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 15px;
+    min-width: 260px;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+}
+.settings-menu.show {
+    display: block;
+}
+.settings-menu label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #ccc;
+}
+.settings-menu select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 14px;
+}
+.settings-menu select option {
+    background: #24103b;
+    color: white;
+}
+.settings-hint {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: #a391ff;
 }
 
 .MainElements {

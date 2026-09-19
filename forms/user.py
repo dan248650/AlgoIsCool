@@ -1,6 +1,8 @@
 from flask_wtf import FlaskForm
+import os
+from flask import current_app
 from wtforms import (PasswordField, StringField, IntegerField, SubmitField, EmailField,
-                     BooleanField, SelectMultipleField)
+                     BooleanField, SelectMultipleField, SelectField)
 from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional
 from data.db import db
 from data.__all_models import Role
@@ -30,6 +32,7 @@ class UserForm(FlaskForm):
     age = IntegerField('Возраст', validators=[DataRequired(), NumberRange(min=10, max=100)])
     address = StringField('Адрес', validators=[DataRequired(), Length(max=200)])
     email = StringField('Email', validators=[DataRequired(), Email()])
+    background_image = SelectField('Фоновое изображение', validators=[Optional()])
     roles = SelectMultipleField('Роли', coerce=int, validators=[Optional()])
     active = BooleanField('Активен', default=True)
     submit = SubmitField('Сохранить')
@@ -40,6 +43,13 @@ class UserForm(FlaskForm):
             (role.id, role.name)
             for role in db.session.query(Role).all()
         ]
+        images_dir = os.path.join(current_app.config['BASE_DIR'], 'static', 'assets', 'images')
+        if os.path.exists(images_dir):
+            images = [f for f in os.listdir(images_dir)
+                      if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.avif'))]
+            self.background_image.choices = [(img, img) for img in images]
+        else:
+            self.background_image.choices = [('tree.jpg', 'tree.jpg')]
 
 
 class ChangePasswordForm(FlaskForm):

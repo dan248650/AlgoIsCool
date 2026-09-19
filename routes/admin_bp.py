@@ -10,6 +10,7 @@ import platform
 import sqlite3
 from datetime import datetime
 from forms.algorithm import AlgorithmForm
+from visualization.python_to_low import generate_low_level_from_python
 import json
 from utils.slugify import slugify
 
@@ -103,13 +104,24 @@ def add_algorithm():
             algorithm.description_short = form.description_short.data or None
             algorithm.description_full = form.description_full.data or None
             algorithm.complexity = form.complexity.data or None
+            algorithm.definition_mode = form.definition_mode.data
 
-            definition = {
-                'type': form.definition_type.data,
-                'initial_state': json.loads(form.definition_initial_state.data) if form.definition_initial_state.data and form.definition_initial_state.data.strip() else {},
-                'steps': json.loads(form.definition_steps.data)
-            }
-            algorithm.definition = definition
+            if form.definition_mode.data == 'python':
+                python_code = form.definition_python.data
+                # Передаём default_input_data и default_settings как пример
+                input_data = json.loads(form.default_input_data.data) if form.default_input_data.data else {}
+                settings = json.loads(form.default_settings.data) if form.default_settings.data else {}
+                definition = generate_low_level_from_python(python_code, input_data, settings)
+                algorithm.definition = definition
+                algorithm.definition_python = python_code
+            else:
+                definition = {
+                    'type': form.definition_type.data,
+                    'initial_state': json.loads(form.definition_initial_state.data) if form.definition_initial_state.data and form.definition_initial_state.data.strip() else {},
+                    'steps': json.loads(form.definition_steps.data)
+                }
+                algorithm.definition = definition
+                algorithm.definition_python = None
 
             algorithm.input_schema = json.loads(form.input_schema.data) if form.input_schema.data and form.input_schema.data.strip() else None
             algorithm.default_settings = json.loads(form.default_settings.data) if form.default_settings.data and form.default_settings.data.strip() else None
@@ -140,6 +152,9 @@ def edit_algorithm(algorithm_id):
         form.description_short.data = algorithm.description_short
         form.description_full.data = algorithm.description_full
         form.complexity.data = algorithm.complexity
+        form.definition_mode.data = algorithm.definition_mode
+
+        form.definition_python.data = algorithm.definition_python
 
         if algorithm.definition:
             form.definition_type.data = algorithm.definition.get('type', 'array')
@@ -161,13 +176,23 @@ def edit_algorithm(algorithm_id):
             algorithm.description_short = form.description_short.data or None
             algorithm.description_full = form.description_full.data or None
             algorithm.complexity = form.complexity.data or None
+            algorithm.definition_mode = form.definition_mode.data
 
-            definition = {
-                'type': form.definition_type.data,
-                'initial_state': json.loads(form.definition_initial_state.data) if form.definition_initial_state.data and form.definition_initial_state.data.strip() else {},
-                'steps': json.loads(form.definition_steps.data)
-            }
-            algorithm.definition = definition
+            if form.definition_mode.data == 'python':
+                python_code = form.definition_python.data
+                input_data = json.loads(form.default_input_data.data) if form.default_input_data.data else {}
+                settings = json.loads(form.default_settings.data) if form.default_settings.data else {}
+                definition = generate_low_level_from_python(python_code, input_data, settings)
+                algorithm.definition = definition
+                algorithm.definition_python = python_code
+            else:
+                definition = {
+                    'type': form.definition_type.data,
+                    'initial_state': json.loads(form.definition_initial_state.data) if form.definition_initial_state.data and form.definition_initial_state.data.strip() else {},
+                    'steps': json.loads(form.definition_steps.data)
+                }
+                algorithm.definition = definition
+                algorithm.definition_python = None
 
             algorithm.input_schema = json.loads(form.input_schema.data) if form.input_schema.data and form.input_schema.data.strip() else None
             algorithm.default_settings = json.loads(form.default_settings.data) if form.default_settings.data and form.default_settings.data.strip() else None

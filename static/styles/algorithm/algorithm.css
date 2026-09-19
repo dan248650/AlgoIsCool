@@ -20,7 +20,6 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: url("/assets/images/tree.jpg") center/cover no-repeat;
     z-index: -2;
 }
 
@@ -213,10 +212,51 @@ body::after {
     gap: 15px;
     flex-wrap: wrap;
     margin-bottom: 10px;
+    position: relative;
 }
 
 .control-row:last-child {
     margin-bottom: 0;
+}
+
+/* Прозрачный контейнер для кнопок, прижатый вправо */
+.button-row {
+    position: absolute;
+    right: 0;                /* Смещает блок максимально направо */
+    top: 50%;               /* Центрирует по вертикали (опционально) */
+    transform: translateY(-50%); /* Выравнивание по вертикали */
+
+    display: flex;          /* Выстраивает кнопки в ряд */
+    gap: 8px;               /* Расстояние между кнопками */
+    background: transparent; /* Полностью прозрачный фон контейнера */
+    box-sizing: border-box;
+}
+
+/* Стили для кнопок-квадратиков */
+.square-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Квадратные размеры */
+    width: 30px;
+    height: 30px;
+
+    border-radius: 8px;     /* Закругление углов */
+    border: 2px solid #445; /* Граница кнопки */
+    background: transparent; /* Прозрачный фон кнопки */
+    color: #445;            /* Цвет цифры */
+    font-family: sans-serif;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease; /* Плавный эффект при наведении */
+}
+
+/* Эффект при наведении (hover) */
+.square-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1); /* Легкое затемнение фона */
+    transform: scale(1.05);               /* Небольшое увеличение */
 }
 
 .control-buttons {
