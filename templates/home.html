@@ -13,6 +13,25 @@
         <p class="Logo">AlgoIsCool</p>
         <button class="HelpButton" id="helpButton">Как это работает?</button>
     </div>
+    <div class="header-right">
+        <div class="settings-dropdown">
+            <button class="settings-btn" id="settingsBtn" title="Настройки">⚙️</button>
+            <div class="settings-menu" id="settingsMenu">
+                <label for="bgSelect">Фон страницы алгоритма:</label>
+                <select id="bgSelect">
+                    {% set current_bg = (current_user.get_settings()['background_image'] if current_user.is_authenticated else 'tree.jpg') %}
+                    {% for img in images %}
+                        <option value="{{ img }}" {% if img == current_bg %}selected{% endif %}>
+                            {{ img }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if not current_user.is_authenticated %}
+                    <p class="settings-hint">Войдите, чтобы сохранить выбор</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -81,6 +100,35 @@
             console.warn("Animation initialization failed:", error);
         }
     }
+
+    const isAuthenticated = {{ current_user.is_authenticated|tojson }};
+
+    document.getElementById('settingsBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('settingsMenu')?.classList.toggle('show');
+    });
+
+    document.getElementById('bgSelect')?.addEventListener('change', async (e) => {
+        const img = e.target.value;
+        if (!isAuthenticated) {
+            alert('Пожалуйста, войдите в систему, чтобы сохранить настройки');
+            return;
+        }
+        const response = await fetch('/update_settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ background_image: img })
+        });
+        if (!response.ok) {
+            alert('Не удалось сохранить настройки');
+        }
+    });
+
+    window.addEventListener('click', (e) => {
+        if (!e.target.closest('.settings-dropdown')) {
+            document.getElementById('settingsMenu')?.classList.remove('show');
+        }
+    });
 
     document.getElementById('helpButton')?.addEventListener('click', () => {
         alert("AlgoIsCool - это платформа для визуализации алгоритмов. Каждый алгоритм представлен в виде анимации, что делает обучение наглядным и интересным!");

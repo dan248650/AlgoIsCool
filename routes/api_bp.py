@@ -59,7 +59,8 @@ def create_algorithm():
         algorithm = Algorithm(id=algo_id)
         for field in ['name', 'display_name', 'category_id', 'description_short',
                       'description_full', 'complexity', 'order_index',
-                      'default_input_data', 'definition', 'input_schema', 'default_settings']:
+                      'default_input_data', 'definition', 'input_schema', 'default_settings',
+                      'definition_python', 'definition_mode']:
             if field in data:
                 setattr(algorithm, field, data[field])
 
@@ -96,7 +97,8 @@ def update_algorithm(algorithm_id):
     try:
         for field in ['name', 'display_name', 'category_id', 'description_short',
                       'description_full', 'complexity', 'order_index',
-                      'default_input_data', 'definition', 'input_schema', 'default_settings']:
+                      'default_input_data', 'definition', 'input_schema', 'default_settings',
+                      'definition_python', 'definition_mode']:
             if field in data:
                 setattr(algorithm, field, data[field])
 
@@ -150,7 +152,9 @@ def list_algorithms_admin():
             'definition': algo.definition,
             'input_schema': algo.input_schema,
             'default_settings': algo.default_settings,
-            'default_input_data': algo.default_input_data
+            'default_input_data': algo.default_input_data,
+            'definition_python': algo.definition_python,
+            'definition_mode': algo.definition_mode
         })
     return jsonify(result), 200
 
@@ -175,6 +179,8 @@ def get_algorithm_admin(algorithm_id):
         'definition': algo.definition,
         'input_schema': algo.input_schema,
         'default_settings': algo.default_settings,
-        'default_input_data': algo.default_input_data
+        'default_input_data': algo.default_input_data,
+        'definition_python': algo.definition_python,
+        'definition_mode': algo.definition_mode
     }
     return jsonify(result), 200

@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AlgoIsCool - {{ algorithm.name }}</title>
     <link rel="stylesheet" href="/static/styles/algorithm/algorithm.css">
+    <style>
+        body::before {
+            background: url("/assets/images/{{ current_user.get_settings()['background_image'] if current_user.is_authenticated else 'tree.jpg' }}") center/cover no-repeat;
+        }
+    </style>
 </head>
 <body>
     <div class="algorithm-container-vertical">
@@ -90,6 +95,11 @@
                     <div class="control-row">
                         <button id="applyArrayBtn" class="small-btn">Применить</button>
                         <button id="generateRandomBtn" class="small-btn">Случайный</button>
+                        <div class="button-row">
+                            {% for i in range(5) %}
+                                <button class="square-btn">{{ i + 1 }}</button>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>

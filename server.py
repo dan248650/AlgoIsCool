@@ -72,7 +72,7 @@ def init_algorithms():
             for key in ['name', 'display_name', 'category_id', 'description_short',
                         'description_full', 'complexity', 'icon', 'order_index',
                         'default_input_data', 'definition', 'input_schema',
-                        'default_settings']:
+                        'default_settings', 'definition_python', 'definition_mode']:
                 setattr(existing, key, getattr(new_algo, key))
             db.session.add(existing)
         else:
@@ -97,7 +97,7 @@ def init_database():
         db.session.commit()
 
         admin_role = db.session.query(Role).filter_by(name='admin').first()
-        admin = db.session.query(User).filter_by(email='admin@algoiscool.org').first()
+        admin = db.session.query(User).filter_by(email='admin@algoiscool.ru').first()
 
         if not admin and admin_role:
             password = generate_password_for_user()

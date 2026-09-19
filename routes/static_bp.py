@@ -94,4 +94,11 @@ def favicon():
 @static_bp.route('/')
 def home_page():
     """Главная страница"""
-    return render_template('home.html')
+    images_dir = os.path.join(current_app.config['BASE_DIR'], 'static', 'assets', 'images')
+    images = []
+    if os.path.exists(images_dir):
+        images = sorted(
+            f for f in os.listdir(images_dir)
+            if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.avif'))
+        )
+    return render_template('home.html', images=images)
