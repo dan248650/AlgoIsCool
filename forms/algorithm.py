@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, TextAreaField, SelectField, SubmitField
-from wtforms.validators import DataRequired, Optional, Length, NumberRange
+from wtforms.validators import DataRequired, Optional, Length, NumberRange, ValidationError
 import json
 
 
@@ -24,12 +24,27 @@ class AlgorithmForm(FlaskForm):
     definition_initial_state = TextAreaField('Начальное состояние (JSON)', validators=[Optional()])
     definition_steps = TextAreaField('Шаги (JSON)', validators=[DataRequired()])
 
+    definition_python = TextAreaField('Python-код описания визуализации', validators=[Optional()])
+
     # Другие JSON-поля
     input_schema = TextAreaField('Input schema (JSON)', validators=[Optional()])
     default_settings = TextAreaField('Default settings (JSON)', validators=[Optional()])
     default_input_data = TextAreaField('Default input data (JSON)', validators=[Optional()])
 
+    # Режим описания
+    definition_mode = SelectField('Режим описания', choices=[
+        ('low_level', 'Низкоуровневое JSON-описание'),
+        ('python', 'Высокоуровневый Python-код')
+    ], default='low_level', validators=[DataRequired()])
+
     submit = SubmitField('Сохранить')
+
+    def validate_definition_python(self, field):
+        if self.definition_mode.data == 'python' and field.data:
+            try:
+                compile(field.data, '<string>', 'exec')
+            except SyntaxError as e:
+                raise ValidationError(f'Синтаксическая ошибка в Python-коде: {e}')
 
     def validate_definition_steps(self, field):
         """Проверка, что steps — валидный JSON"""

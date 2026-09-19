@@ -81,34 +81,56 @@
             {% endfor %}
         </div>
 
-        <!-- Definition -->
-        <h3>Definition (структура алгоритма)</h3>
-        <div class="form-row">
-            <div class="form-group col-md-6">
-                {{ form.definition_type.label }} *
-                {{ form.definition_type(class="form-control") }}
-                {% for error in form.definition_type.errors %}
+        <div class="form-group">
+            {{ form.definition_mode.label }}
+            {{ form.definition_mode(class="form-control", id="definitionMode") }}
+        </div>
+
+        <!-- Блок для Python-режима -->
+        <div id="pythonBlock" style="display: {% if form.definition_mode.data == 'python' %}block{% else %}none{% endif %};">
+            <div class="form-group">
+                {{ form.definition_python.label }}
+                {{ form.definition_python(class="form-control", rows="15", placeholder="Введите Python-код алгоритма...") }}
+                <small class="form-text text-muted">
+                    Доступны переменные из default_input_data, а также функции: create_elements, highlight, unhighlight, swap_elements, wait, create_graph и др.
+                </small>
+                {% for error in form.definition_python.errors %}
                     <p class="alert alert-danger">{{ error }}</p>
                 {% endfor %}
             </div>
         </div>
 
-        <div class="form-group">
-            {{ form.definition_initial_state.label }}
-            {{ form.definition_initial_state(class="form-control", rows="3", placeholder='{"array": "input_array", "n": "length(input_array)"}') }}
-            {% for error in form.definition_initial_state.errors %}
-                <p class="alert alert-danger">{{ error }}</p>
-            {% endfor %}
-            <small class="form-text text-muted">JSON-объект с начальными переменными</small>
-        </div>
+        <!-- Блок для низкоуровневого режима -->
+        <div id="lowLevelBlock" style="display: {% if form.definition_mode.data == 'low_level' %}block{% else %}none{% endif %};">
+            <!-- Definition -->
+            <h3>Definition (структура алгоритма)</h3>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    {{ form.definition_type.label }} *
+                    {{ form.definition_type(class="form-control") }}
+                    {% for error in form.definition_type.errors %}
+                        <p class="alert alert-danger">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
 
-        <div class="form-group">
-            {{ form.definition_steps.label }} *
-            {{ form.definition_steps(class="form-control", rows="8", placeholder='[\n  {\n    "name": "Создание элементов",\n    "commands": [\n      {"component": "create_elements", "params": {"array": "array"}}\n    ]\n  }\n]') }}
-            {% for error in form.definition_steps.errors %}
-                <p class="alert alert-danger">{{ error }}</p>
-            {% endfor %}
-            <small class="form-text text-muted">Массив шагов в формате JSON</small>
+            <div class="form-group">
+                {{ form.definition_initial_state.label }}
+                {{ form.definition_initial_state(class="form-control", rows="3", placeholder='{"array": "input_array", "n": "length(input_array)"}') }}
+                {% for error in form.definition_initial_state.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+                <small class="form-text text-muted">JSON-объект с начальными переменными</small>
+            </div>
+
+            <div class="form-group">
+                {{ form.definition_steps.label }} *
+                {{ form.definition_steps(class="form-control", rows="8", placeholder='[\n  {\n    "name": "Создание элементов",\n    "commands": [\n      {"component": "create_elements", "params": {"array": "array"}}\n    ]\n  }\n]') }}
+                {% for error in form.definition_steps.errors %}
+                    <p class="alert alert-danger">{{ error }}</p>
+                {% endfor %}
+                <small class="form-text text-muted">Массив шагов в формате JSON</small>
+            </div>
         </div>
 
         <!-- Остальные JSON -->
@@ -147,4 +169,14 @@
         {% endif %}
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('definitionMode').addEventListener('change', function() {
+        var mode = this.value;
+        document.getElementById('pythonBlock').style.display = (mode === 'python') ? 'block' : 'none';
+        document.getElementById('lowLevelBlock').style.display = (mode !== 'python') ? 'block' : 'none';
+    });
+</script>
 {% endblock %}

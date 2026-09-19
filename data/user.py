@@ -7,6 +7,7 @@ from datetime import datetime
 from flask_security import UserMixin
 from sqlalchemy import event
 from sqlalchemy_serializer import SerializerMixin
+from sqlalchemy.ext.mutable import MutableDict
 
 
 class User(db.Model, UserMixin, SerializerMixin):
@@ -18,6 +19,10 @@ class User(db.Model, UserMixin, SerializerMixin):
         '-roles.users',
     )
 
+    DEFAULT_SETTINGS = {
+        'background_image': 'tree.jpg',
+    }
+
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     surname = sqlalchemy.Column(sqlalchemy.String)
     name = sqlalchemy.Column(sqlalchemy.String)
@@ -28,6 +33,10 @@ class User(db.Model, UserMixin, SerializerMixin):
     modified_date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.now)
     active = sqlalchemy.Column(sqlalchemy.Boolean, default=True)
     city_from = sqlalchemy.Column(sqlalchemy.String, nullable=True)
+    settings = sqlalchemy.Column(
+        MutableDict.as_mutable(sqlalchemy.JSON),
+        default=DEFAULT_SETTINGS
+    )
 
     fs_uniquifier = sqlalchemy.Column(sqlalchemy.String, unique=True)
 
@@ -42,6 +51,17 @@ class User(db.Model, UserMixin, SerializerMixin):
 
     def is_admin(self):
         return any(role.name == 'admin' for role in self.roles)
+
+    def get_settings(self):
+        result = dict(self.DEFAULT_SETTINGS)
+        if self.settings:
+            result.update(self.settings)
+        return result
+
+    def update_settings(self, **kwargs):
+        current = self.get_settings()
+        current.update(kwargs)
+        self.settings = current
 
     def __repr__(self):
         return f'<User {self.id}: {self.name} {self.surname}>'

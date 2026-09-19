@@ -30,6 +30,9 @@ class Algorithm(db.Model):
     input_schema = db.Column(JSON)
     default_settings = db.Column(JSON)
 
+    definition_python = db.Column(db.Text, nullable=True)  # Python-код (если режим 'python')
+    definition_mode = db.Column(db.String(20), default='low_level')  # 'low_level' или 'python'
+
 
 def add_linear_search():
     linear_search = Algorithm(

@@ -69,6 +69,15 @@
             {% endfor %}
             <small class="form-text text-muted">Выберите роли (зажмите Ctrl для множественного выбора)</small>
         </div>
+
+        <div class="form-group">
+            {{ form.background_image.label }}
+            {{ form.background_image(class="form-control") }}
+            {% for error in form.background_image.errors %}
+                <p class="alert alert-danger">{{ error }}</p>
+            {% endfor %}
+            <small class="form-text text-muted">Картинка из папки images</small>
+        </div>
         
         <div class="form-group form-check">
             {{ form.active(class="form-check-input") }}
