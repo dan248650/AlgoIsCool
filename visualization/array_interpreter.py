@@ -153,6 +153,8 @@ class ArrayInterpreter(BaseInterpreter):
         value_expr = command['value']
         value = self._evaluate_expression(value_expr, state)
         state[variable] = value
+        if not variable.startswith('_'):
+            self.variables[variable] = value
         if variable == 'array' and isinstance(value, list):
             for idx, val in enumerate(value):
                 elem_id = f"elem_{idx}"
