@@ -2,6 +2,42 @@ import ast
 from _ast import stmt
 from typing import List, Dict, Any
 
+# Классы-конструкторы структур. Имя класса → внутренний тип.
+STRUCTURE_CLASSES = {
+    'Vector': 'vector',
+    'Graph': 'graph',
+}
+
+# Класс окна.
+WINDOW_CLASS = 'Window'
+
+# Методы структур, порождающие low-level команды с полем 'structure'.
+# (имя метода = имя компонента; если разойдутся — расширим здесь)
+STRUCTURE_METHODS = {
+    'highlight',
+    'unhighlight',
+    'set_opacity',
+    'swap',
+    'highlight_edge',
+    'unhighlight_edge',
+    'highlight_node',
+    'unhighlight_node',
+    'set_node_label',
+}
+
+# Методы окна: имя метода → компонент.
+WINDOW_METHODS = {
+    'show': 'show_window',
+    'hide': 'hide_window',
+    'attach': 'add_structure_to_window',
+}
+
+# Глобальные функции-команды: имя → компонент.
+# (пока только wait; сюда же попадут print и т.п., когда появятся)
+GLOBAL_FUNCTIONS = {
+    'wait': 'wait',
+}
+
 
 class PythonToLowTransformer(ast.NodeVisitor):
     """
@@ -11,6 +47,8 @@ class PythonToLowTransformer(ast.NodeVisitor):
     def __init__(self):
         self.commands = []
         self.current_block = self.commands
+        self.structure_names = set()  # имена экземпляров структур
+        self.window_names = set()  # имена окон
 
     # ---------- Обход модуля ----------
     def visit_Module(self, node):
@@ -101,36 +139,229 @@ class PythonToLowTransformer(ast.NodeVisitor):
     # ---------- Присваивание ----------
     def visit_Assign(self, node):
         if len(node.targets) != 1:
-            raise SyntaxError("Поддерживается только присваивание одной переменной")
-        target = node.targets[0]
-        if not isinstance(target, ast.Name):
-            raise SyntaxError("Цель присваивания должна быть простым именем")
-        var_name = target.id
-        value_expr = ast.unparse(node.value).strip()
-        self.current_block.append({
-            "component": "set_variable",
-            "variable": var_name,
-            "value": value_expr
-        })
+            raise SyntaxError(
+                f"Цепочка присваиваний (a = b = c) не поддерживается "
+                f"(строка {node.lineno}). Разделите на отдельные строки."
+            )
 
-    def visit_AugAssign(self, node):
-        if isinstance(node.target, ast.Name):
-            var = node.target.id
-            # Преобразуем в эквивалентное присваивание: x = x + y
-            left = ast.Name(id=var, ctx=ast.Load())
-            right = node.value
-            op = node.op
-            # Создаём бинарное выражение
-            binop = ast.BinOp(left=left, op=op, right=right)
-            value = ast.unparse(binop).strip()
+        target = node.targets[0]
+
+        # 1. Конструктор структуры или окна — обрабатываем как раньше
+        if (isinstance(target, ast.Name)
+                and isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Name)):
+            ctor_name = node.value.func.id
+            if ctor_name in STRUCTURE_CLASSES:
+                self._handle_create_structure(target.id, node.value, ctor_name)
+                return
+            if ctor_name == WINDOW_CLASS:
+                self._handle_create_window(target.id, node.value)
+                return
+
+        # 2. Множественное присваивание: a, b, ... = expr1, expr2, ...
+        if isinstance(target, ast.Tuple):
+            if not isinstance(node.value, ast.Tuple):
+                raise SyntaxError(
+                    f"Ожидается кортеж значений справа от 'a, b, ...' "
+                    f"(строка {node.lineno})"
+                )
+            if len(node.value.elts) != len(target.elts):
+                raise SyntaxError(
+                    f"Число целей ({len(target.elts)}) не совпадает "
+                    f"с числом значений ({len(node.value.elts)}) "
+                    f"(строка {node.lineno})"
+                )
+            targets = [self._describe_target(elt) for elt in target.elts]
+            if any(t is None for t in targets):
+                raise SyntaxError(
+                    f"Неподдерживаемая цель в множественном присваивании "
+                    f"(строка {node.lineno})"
+                )
+            values = [ast.unparse(v).strip() for v in node.value.elts]
+            self.current_block.append({
+                "component": "multi_assign",
+                "targets": targets,
+                "values": values,
+            })
+            return
+
+        # 3. Одиночное присваивание
+        t = self._describe_target(target)
+        if t is None:
+            raise SyntaxError(
+                f"Неподдерживаемая цель присваивания (строка {node.lineno})"
+            )
+        value_expr = ast.unparse(node.value).strip()
+
+        if t['kind'] == 'name':
             self.current_block.append({
                 "component": "set_variable",
-                "variable": var,
-                "value": value
+                "variable": t['name'],
+                "value": value_expr,
             })
-        else:
-            # Не поддерживаем присваивания по индексу/атрибуту
-            raise SyntaxError("Цель присваивания должна быть простым именем")
+        elif t['kind'] == 'index':
+            self.current_block.append({
+                "component": "set_index",
+                "target": t['target'],
+                "index": t['index'],
+                "value": value_expr,
+            })
+        elif t['kind'] == 'attr':
+            self.current_block.append({
+                "component": "set_attr",
+                "target": t['target'],
+                "attr": t['attr'],
+                "value": value_expr,
+            })
+
+    def _handle_create_structure(self, name, call_node, ctor_name):
+        type_name = STRUCTURE_CLASSES[ctor_name]
+        data = self._extract_structure_data(type_name, call_node)
+        self.structure_names.add(name)
+        self.current_block.append({
+            "component": "create_structure",
+            "name": name,
+            "type": type_name,
+            "data": data,
+        })
+
+    def _handle_create_window(self, name, call_node):
+        title = None
+        if call_node.args:
+            title = self._expr_to_data(call_node.args[0])
+        self.window_names.add(name)
+        self.current_block.append({
+            "component": "create_window",
+            "window_id": name,
+            "title": title or name,
+        })
+
+    def _extract_structure_data(self, type_name, call_node):
+        args = call_node.args
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+
+        if type_name == 'vector':
+            # Vector(array) или Vector(array=...)
+            if args:
+                return self._expr_to_data(args[0])
+            if 'array' in kwargs:
+                return self._expr_to_data(kwargs['array'])
+            return []
+
+        if type_name == 'graph':
+            # Graph(nodes=..., edges=..., directed=...)
+            return {
+                'nodes': self._expr_to_data(kwargs.get('nodes')) or [],
+                'edges': self._expr_to_data(kwargs.get('edges')) or [],
+                'directed': self._expr_to_data(kwargs.get('directed')) if 'directed' in kwargs else False,
+            }
+
+        raise SyntaxError(f"Не знаю, как извлечь данные для типа '{type_name}'")
+
+    def _expr_to_data(self, node):
+        """
+        Пытается вытащить литеральное значение (число, строка, список, словарь).
+        Если выражение не литеральное — возвращает строку-выражение, которую
+        интерпретатор вычислит во время выполнения.
+        """
+        if node is None:
+            return None
+        try:
+            return ast.literal_eval(node)
+        except (ValueError, SyntaxError):
+            return ast.unparse(node).strip()
+
+    def visit_AugAssign(self, node):
+        op_str = self._op_to_str(node.op)
+        if op_str is None:
+            raise SyntaxError(
+                f"Неподдерживаемый оператор присваивания (строка {node.lineno})"
+            )
+
+        left = ast.unparse(node.target).strip()
+        right = ast.unparse(node.value).strip()
+        value_expr = f"{left} {op_str} {right}"
+
+        t = self._describe_target(node.target)
+        if t is None:
+            raise SyntaxError(
+                f"Неподдерживаемая цель AugAssign (строка {node.lineno})"
+            )
+
+        if t['kind'] == 'name':
+            self.current_block.append({
+                "component": "set_variable",
+                "variable": t['name'],
+                "value": value_expr,
+            })
+        elif t['kind'] == 'index':
+            self.current_block.append({
+                "component": "set_index",
+                "target": t['target'],
+                "index": t['index'],
+                "value": value_expr,
+            })
+        elif t['kind'] == 'attr':
+            self.current_block.append({
+                "component": "set_attr",
+                "target": t['target'],
+                "attr": t['attr'],
+                "value": value_expr,
+            })
+
+    @staticmethod
+    def _op_to_str(op):
+        return {
+            ast.Add: '+',
+            ast.Sub: '-',
+            ast.Mult: '*',
+            ast.Div: '/',
+            ast.FloorDiv: '//',
+            ast.Mod: '%',
+            ast.Pow: '**',
+            ast.BitAnd: '&',
+            ast.BitOr: '|',
+            ast.BitXor: '^',
+            ast.LShift: '<<',
+            ast.RShift: '>>',
+        }.get(type(op))
+
+    def _describe_target(self, node):
+        """
+        Разбирает левую часть присваивания.
+        Возвращает dict {'kind': 'name'|'index'|'attr', ...} или None.
+        Проверяет, что obj.attr не указывает на структуру или окно.
+        """
+        if isinstance(node, ast.Name):
+            return {'kind': 'name', 'name': node.id}
+
+        if isinstance(node, ast.Subscript):
+            if not isinstance(node.value, ast.Name):
+                raise SyntaxError(
+                    f"Поддерживается только простое имя слева от [ ] "
+                    f"(строка {node.lineno}). Вложенные подписи arr[i][j] пока нет."
+                )
+            return {
+                'kind': 'index',
+                'target': node.value.id,
+                'index': ast.unparse(node.slice).strip(),
+            }
+
+        if isinstance(node, ast.Attribute):
+            if not isinstance(node.value, ast.Name):
+                raise SyntaxError(
+                    f"Поддерживается только obj.attr для простого obj "
+                    f"(строка {node.lineno})"
+                )
+            obj_name = node.value.id
+            if obj_name in self.structure_names or obj_name in self.window_names:
+                raise SyntaxError(
+                    f"Нельзя изменять атрибут структуры/окна: "
+                    f"{obj_name}.{node.attr} (строка {node.lineno})"
+                )
+            return {'kind': 'attr', 'target': obj_name, 'attr': node.attr}
+
+        return None
 
     # ---------- Вызовы функций (команды) ----------
     def visit_Expr(self, node):
@@ -139,134 +370,183 @@ class PythonToLowTransformer(ast.NodeVisitor):
 
     # ---------- Обработка вызова ----------
     def _handle_call(self, call_node):
-        func_name = ast.unparse(call_node.func).strip()
-        mapping = {
-            "create_elements": "create_elements",
-            "highlight": "highlight",
-            "unhighlight": "unhighlight",
-            "swap_elements": "swap_elements",
-            "move_straight": "move_straight",
-            "set_opacity": "set_opacity",
-            "wait": "wait",
-            "create_graph": "create_graph",
-            "highlight_node": "highlight_node",
-            "unhighlight_node": "unhighlight_node",
-            "highlight_edge": "highlight_edge",
-            "unhighlight_edge": "unhighlight_edge",
-            "set_node_label": "set_node_label",
-        }
-        if func_name not in mapping:
-            # Неизвестная функция (возможно, это стандартная функция, например, print)
-            raise SyntaxError(f"Неизвестная функция: {func_name}")
+        func = call_node.func
 
-        component = mapping[func_name]
+        # ---- Метод: obj.method(...) ----
+        if isinstance(func, ast.Attribute):
+            obj_name = ast.unparse(func.value).strip()
+            method_name = func.attr
+
+            if obj_name in self.structure_names:
+                self._handle_structure_method(obj_name, method_name, call_node)
+                return
+
+            if obj_name in self.window_names:
+                self._handle_window_method(obj_name, method_name, call_node)
+                return
+
+            raise SyntaxError(
+                f"Объект '{obj_name}' не опознан как структура или окно. "
+                f"Перед вызовом метода его нужно создать конструктором "
+                f"({', '.join(STRUCTURE_CLASSES)} или {WINDOW_CLASS})."
+            )
+
+        # ---- Простой вызов: func(...) ----
+        if isinstance(func, ast.Name):
+            func_name = func.id
+
+            if func_name in STRUCTURE_CLASSES or func_name == WINDOW_CLASS:
+                raise SyntaxError(
+                    f"Конструктор '{func_name}(...)' должен стоять в правой части "
+                    f"присваивания: '<имя> = {func_name}(...)'."
+                )
+
+            if func_name in GLOBAL_FUNCTIONS:
+                component = GLOBAL_FUNCTIONS[func_name]
+                params = self._build_global_params(func_name, call_node)
+                self.current_block.append({
+                    "component": component,
+                    "params": params,
+                })
+                return
+
+            raise SyntaxError(
+                f"Функция '{func_name}(...)' не поддерживается. "
+                f"Допустимые глобальные функции: {', '.join(GLOBAL_FUNCTIONS)}. "
+                f"Для действий над структурой используйте метод: <структура>.{func_name}(...)."
+            )
+
+        raise SyntaxError(f"Неподдерживаемый вызов: {ast.unparse(call_node)}")
+
+    def _handle_structure_method(self, structure_name, method_name, call_node):
+        if method_name not in STRUCTURE_METHODS:
+            raise SyntaxError(
+                f"У структуры '{structure_name}' нет метода '{method_name}'. "
+                f"Допустимые: {', '.join(sorted(STRUCTURE_METHODS))}."
+            )
+
+        params = self._build_method_params(method_name, call_node)
+        self.current_block.append({
+            "component": method_name,
+            "structure": structure_name,
+            "params": params,
+        })
+
+    def _handle_window_method(self, window_name, method_name, call_node):
+        if method_name not in WINDOW_METHODS:
+            raise SyntaxError(
+                f"У окна '{window_name}' нет метода '{method_name}'. "
+                f"Допустимые: {', '.join(sorted(WINDOW_METHODS))}."
+            )
+
+        component = WINDOW_METHODS[method_name]
+
+        if method_name in ('show', 'hide'):
+            self.current_block.append({
+                "component": component,
+                "window": window_name,
+            })
+            return
+
+        if method_name == 'attach':
+            if not call_node.args:
+                raise SyntaxError(
+                    f"{window_name}.attach(...) требует имя структуры аргументом."
+                )
+            arg = call_node.args[0]
+            if not isinstance(arg, ast.Name):
+                raise SyntaxError(
+                    f"{window_name}.attach(...) принимает только имя структуры "
+                    f"(простое имя, не выражение)."
+                )
+            structure_name = arg.id
+            if structure_name not in self.structure_names:
+                raise SyntaxError(
+                    f"'{structure_name}' не является известной структурой — "
+                    f"сначала создайте её конструктором."
+                )
+            self.current_block.append({
+                "component": component,
+                "window": window_name,
+                "structure": structure_name,
+            })
+            return
+
+    def _build_method_params(self, method_name, call_node):
+        args = call_node.args
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+        params = {}
+
+        if method_name == 'highlight':
+            params['indices'] = self._method_arg(args[0]) if args else None
+            params['color'] = (self._method_arg(args[1]) if len(args) > 1
+                               else self._method_arg(kwargs.get('color')))
+            if 'style' in kwargs:
+                params['style'] = self._method_arg(kwargs['style'])
+            return params
+
+        if method_name == 'unhighlight':
+            params['indices'] = self._method_arg(args[0]) if args else None
+            return params
+
+        if method_name == 'set_opacity':
+            params['indices'] = self._method_arg(args[0]) if args else None
+            params['opacity'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        if method_name == 'swap':
+            params['i'] = self._method_arg(args[0]) if args else None
+            params['j'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        if method_name in ('highlight_edge', 'unhighlight_edge'):
+            params['from'] = self._method_arg(args[0]) if args else None
+            params['to'] = self._method_arg(args[1]) if len(args) > 1 else None
+            if method_name == 'highlight_edge':
+                params['color'] = (self._method_arg(args[2]) if len(args) > 2
+                                   else self._method_arg(kwargs.get('color')))
+            return params
+
+        if method_name in ('highlight_node', 'unhighlight_node'):
+            params['node_id'] = self._method_arg(args[0]) if args else None
+            if method_name == 'highlight_node':
+                params['color'] = (self._method_arg(args[1]) if len(args) > 1
+                                   else self._method_arg(kwargs.get('color')))
+            return params
+
+        if method_name == 'set_node_label':
+            params['node_id'] = self._method_arg(args[0]) if args else None
+            params['label'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        return params
+
+    def _build_global_params(self, func_name, call_node):
         args = call_node.args
         kwargs = {kw.arg: kw.value for kw in call_node.keywords}
 
-        params = self._build_params(component, args, kwargs)
-        self.current_block.append({
-            "component": component,
-            "params": params
-        })
+        if func_name == 'wait':
+            if args:
+                duration = self._method_arg(args[0])
+            elif 'duration' in kwargs:
+                duration = self._method_arg(kwargs['duration'])
+            else:
+                duration = 300
+            return {'duration': duration}
 
-    # ---------- Построение параметров ----------
-    def _build_params(self, component: str, args: list, kwargs: dict) -> dict:
-        params = {}
-        if component == "create_elements":
-            params["array"] = self._expr_to_value(args[0]) if args else None
-        elif component == "highlight":
-            params["element_ids"] = self._extract_element_ids(args[0]) if args else []
-            params["color"] = self._expr_to_value(kwargs.get("color", None))
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 600))
-        elif component == "unhighlight":
-            params["element_ids"] = self._extract_element_ids(args[0]) if args else []
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 400))
-        elif component == "swap_elements":
-            params["element1_id"] = self._expr_to_value(args[0]) if args else None
-            params["element2_id"] = self._expr_to_value(args[1]) if len(args) > 1 else None
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 500))
-        elif component == "move_straight":
-            params["element_ids"] = self._extract_element_ids(args[0]) if args else []
-            params["to_x"] = self._expr_to_value(args[1]) if len(args) > 1 else None
-            params["to_y"] = self._expr_to_value(args[2]) if len(args) > 2 else None
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 500))
-            params["easing"] = self._expr_to_value(kwargs.get("easing", "ease-in-out"))
-        elif component == "set_opacity":
-            params["element_ids"] = self._extract_element_ids(args[0]) if args else []
-            params["opacity"] = self._expr_to_value(args[1]) if len(args) > 1 else None
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 300))
-        elif component == "wait":
-            params["duration"] = self._expr_to_value(args[0]) if args else 300
-        elif component == "create_graph":
-            params["nodes"] = self._expr_to_value(args[0]) if args else []
-            params["edges"] = self._expr_to_value(args[1]) if len(args) > 1 else []
-            params["directed"] = self._expr_to_value(kwargs.get("directed", False))
-        elif component == "highlight_node":
-            params["node_id"] = self._expr_to_value(args[0]) if args else None
-            params["color"] = self._expr_to_value(kwargs.get("color", None))
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 600))
-        elif component == "unhighlight_node":
-            params["node_id"] = self._expr_to_value(args[0]) if args else None
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 400))
-        elif component == "highlight_edge":
-            params["from"] = self._expr_to_value(args[0]) if args else None
-            params["to"] = self._expr_to_value(args[1]) if len(args) > 1 else None
-            params["color"] = self._expr_to_value(kwargs.get("color", None))
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 600))
-        elif component == "unhighlight_edge":
-            params["from"] = self._expr_to_value(args[0]) if args else None
-            params["to"] = self._expr_to_value(args[1]) if len(args) > 1 else None
-            params["duration"] = self._expr_to_value(kwargs.get("duration", 400))
-        elif component == "set_node_label":
-            params["node_id"] = self._expr_to_value(args[0]) if args else None
-            params["label"] = self._expr_to_value(args[1]) if len(args) > 1 else None
-        return params
+        return {}
 
-    # ---------- Вспомогательные методы ----------
-    def _expr_to_value(self, node: Any) -> Any:
+    def _method_arg(self, node):
         """
-        Преобразует AST-узел в значение.
-        Если передан не-узел (число, строка), возвращает как есть.
+        Аргумент метода. Литералы возвращаются как есть; всё остальное
+        оборачивается в шаблон {{...}}, чтобы интерпретатор подставил значение.
         """
         if node is None:
             return None
-        if isinstance(node, ast.AST):
-            if isinstance(node, ast.Constant):
-                return node.value
-            return ast.unparse(node).strip()
-        return node
-
-    def _extract_element_ids(self, node: ast.AST) -> List[str]:
-        """Извлекает список идентификаторов элементов, всегда возвращает список."""
-        if isinstance(node, ast.List):
-            return [self._expr_to_template(elt) for elt in node.elts]
-        else:
-            return [self._expr_to_template(node)]
-
-    def _expr_to_template(self, node: ast.AST) -> str:
-        """
-        Преобразует AST-узел в шаблонную строку (с двойными фигурными скобками).
-        Поддерживает f-строки и конкатенацию.
-        """
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            return node.value
-        if isinstance(node, ast.JoinedStr):
-            parts = []
-            for value in node.values:
-                if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                    parts.append(value.value)
-                elif isinstance(value, ast.FormattedValue):
-                    expr = ast.unparse(value.value).strip()
-                    parts.append(f"{{{{{expr}}}}}")
-                else:
-                    parts.append(ast.unparse(value).strip())
-            return "".join(parts)
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-            left = self._expr_to_template(node.left)
-            right = self._expr_to_template(node.right)
-            return left + right
-        # Для всего остального используем unparse
-        return ast.unparse(node).strip()
+        try:
+            return ast.literal_eval(node)
+        except (ValueError, SyntaxError):
+            return "{{" + ast.unparse(node).strip() + "}}"
 
     # ---------- Точка входа ----------
     def transform(self, code: str) -> List[Dict]:
@@ -287,10 +567,10 @@ def generate_low_level_from_python(python_code: str, input_data: Dict, settings:
     except SyntaxError as e:
         raise RuntimeError(f"Ошибка синтаксиса: {e}")
 
-    # Определяем тип алгоритма (по наличию create_graph)
+    # Определяем тип алгоритма
     algo_type = "array"
     for cmd in commands:
-        if cmd["component"] == "create_graph":
+        if cmd.get("component") == "create_structure" and cmd.get("type") == "graph":
             algo_type = "graph"
             break
 

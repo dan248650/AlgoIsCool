@@ -8,7 +8,12 @@
     <link rel="stylesheet" href="/static/styles/algorithm/algorithm.css">
     <style>
         body::before {
-            background: url("/assets/images/{{ current_user.get_settings()['background_image'] if current_user.is_authenticated else 'tree.jpg' }}") center/cover no-repeat;
+            background: url("/assets/images/{{ current_user.get_settings()['background_image']['file']
+            if current_user.is_authenticated else 'white.jpg' }}") center/cover no-repeat;
+        }
+        body::after {
+            background: rgba(0, 0, 0, {{ current_user.get_settings()['background_image']['opacity']
+            if current_user.is_authenticated else 0.12 }});
         }
     </style>
 </head>
@@ -57,6 +62,7 @@
         <div class="algo-main">
             <!-- Вкладка визуализации -->
             <div class="tab-content active" id="visualization-tab">
+                <div id="window-tabs" class="window-tabs" style="display: none;"></div>
                 <div id="visualization-area" class="visualization-area">
                 </div>
 
@@ -70,7 +76,7 @@
 
                         <div class="control-slider">
                             <span class="slider-label">⚡</span>
-                            <input type="range" id="speedSlider" min="0.3" max="2.5" step="0.1" value="1.0">
+                            <input type="range" id="speedSlider" min="0.1" max="3.0" step="0.1" value="1.0">
                             <span id="speedValue" class="slider-value">1.0x</span>
                         </div>
 
@@ -95,11 +101,6 @@
                     <div class="control-row">
                         <button id="applyArrayBtn" class="small-btn">Применить</button>
                         <button id="generateRandomBtn" class="small-btn">Случайный</button>
-                        <div class="button-row">
-                            {% for i in range(5) %}
-                                <button class="square-btn">{{ i + 1 }}</button>
-                            {% endfor %}
-                        </div>
                     </div>
                 </div>
             </div>
@@ -125,6 +126,7 @@
         import { GraphRenderer } from '/static/js/utils/graph_renderer.js';
         import { VisualizationPlayer } from '/static/js/utils/player.js';
         import { InputFormHandler } from '/static/js/utils/input_form_handler.js';
+        import { SceneRenderer } from '/static/js/utils/scene_renderer.js';
 
         const algorithmId = '{{ algorithm_id }}';
         const serverInputData = {{ input_data | safe }};
@@ -257,21 +259,30 @@
             }
         }
 
-        // Переключение вкладок
+        // Переключение верхнеуровневых вкладок
         document.querySelectorAll('.tab-vertical').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const tab = btn.getAttribute('data-tab');
+                if (btn.classList.contains('active')) return;
 
-                document.querySelectorAll('.tab-vertical').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                const applyTab = () => {
+                    document.querySelectorAll('.tab-vertical').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
 
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    if (content.id === `${tab}-tab`) {
-                        content.classList.add('active');
-                    } else {
-                        content.classList.remove('active');
-                    }
-                });
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.toggle('active', content.id === `${tab}-tab`);
+                    });
+                };
+
+                // Возврат на визуализацию: нужно пересчитать layout,
+                // потому что контейнер только что стал видимым.
+                if (tab === 'visualization'
+                        && currentRenderEngine
+                        && typeof currentRenderEngine.commitLayout === 'function') {
+                    currentRenderEngine.commitLayout(applyTab);
+                } else {
+                    applyTab();
+                }
             });
         });
 
@@ -321,12 +332,16 @@
                 stepValue.textContent = '0';
 
                 // Создаём рендерер и плеер
-                const snapshotType = snapshots && snapshots.length ? snapshots[0].type : null;
+                const firstSnap = snapshots && snapshots.length ? snapshots[0] : null;
+                const useSceneRenderer = !!(firstSnap && 'structures' in firstSnap);
+
                 let CurrentRendererClass;
-                if (snapshotType === 'graph') {
+                if (useSceneRenderer) {
+                    CurrentRendererClass = SceneRenderer;
+                } else if (firstSnap && firstSnap.type === 'graph') {
                     CurrentRendererClass = GraphRenderer;
                 } else {
-                    CurrentRendererClass = ArrayRenderer; // по умолчанию массив
+                    CurrentRendererClass = ArrayRenderer;
                 }
                 if (!settings.speed_factor){
                     settings.speed_factor = speedSlider.value;
@@ -339,6 +354,18 @@
                     speedFactor: settings.speed_factor,
                     elementSize: settings.element_size
                 });
+
+                if (useSceneRenderer && currentRenderEngine.setSnapshots) {
+                    currentRenderEngine.setSnapshots(snapshots);
+                }
+
+                if (useSceneRenderer) {
+                        buildWindowTabs(snapshots, currentRenderEngine);
+                } else {
+                    const tabsEl = document.getElementById('window-tabs');
+                    tabsEl.style.display = 'none';
+                    tabsEl.innerHTML = '';
+                }
 
                 currentPlayer = new VisualizationPlayer(currentRenderEngine);
                 currentPlayer.onStep = (stepIndex) => {
@@ -364,6 +391,56 @@
             if (container) {
                 container.innerHTML = `<div style="color: #ff6b6b; padding: 20px; text-align: center;">❌ ${message}</div>`;
             }
+        }
+
+        function buildWindowTabs(snapshots, sceneRenderer) {
+            const tabsEl = document.getElementById('window-tabs');
+            tabsEl.innerHTML = '';
+
+            const windows = new Map();   // wid → title
+            for (const snap of snapshots) {
+                if (!snap || !snap.windows) continue;
+                for (const [wid, w] of Object.entries(snap.windows)) {
+                    if (!windows.has(wid)) windows.set(wid, w.title || wid);
+                }
+            }
+
+            if (windows.size === 0) {
+                tabsEl.style.display = 'none';
+                return;
+            }
+
+            tabsEl.style.display = 'flex';
+
+            const activateTab = (tabId) => {
+                tabsEl.querySelectorAll('.window-tab').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === tabId);
+                });
+                sceneRenderer.setActiveTab(tabId);
+            };
+
+            for (const [wid, title] of windows) {
+                const btn = document.createElement('button');
+                btn.className = 'window-tab';
+                btn.textContent = title;
+                btn.dataset.tab = 'window:' + wid;
+                btn.onclick = () => activateTab(btn.dataset.tab);
+                tabsEl.appendChild(btn);
+            }
+
+            const allBtn = document.createElement('button');
+            allBtn.className = 'window-tab';
+            allBtn.textContent = 'All';
+            allBtn.dataset.tab = 'all';
+            allBtn.onclick = () => activateTab('all');
+            tabsEl.appendChild(allBtn);
+
+            // Значение по умолчанию
+            const defaultTab = (windows.size === 1)
+                ? 'window:' + windows.keys().next().value
+                : 'all';
+
+            activateTab(defaultTab);
         }
 
         // Bind events
@@ -443,7 +520,7 @@
                 for (let cmdIdx = startCmd; cmdIdx <= targetCommand; cmdIdx++) {
                     const cmd = commands[cmdIdx];
                     if (cmd && currentRenderEngine) {
-                        await currentRenderEngine.executeCommand(cmd, true); // skipAnimation = true
+                        await currentRenderEngine.executeCommand(cmd, true, cmdIdx); // skipAnimation = true
                     }
                 }
 

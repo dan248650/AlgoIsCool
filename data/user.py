@@ -20,7 +20,7 @@ class User(db.Model, UserMixin, SerializerMixin):
     )
 
     DEFAULT_SETTINGS = {
-        'background_image': 'tree.jpg',
+        'background_image': {'file': 'white.jpg', 'opacity': 0.12}
     }
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)

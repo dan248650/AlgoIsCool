@@ -17,6 +17,10 @@ def init_categories():
         {'id': 'sorting', 'name': 'Sorting Algorithms', 'display_name': 'Алгоритмы сортировки', 'order_index': 10},
         {'id': 'search', 'name': 'Search Algorithms', 'display_name': 'Алгоритмы поиска', 'order_index': 20},
         {'id': 'graph', 'name': 'Graph Algorithms', 'display_name': 'Графовые алгоритмы', 'order_index': 30},
+        {'id': 'sorting*', 'name': 'Sorting Algorithms', 'display_name': 'Алгоритмы сортировки', 'order_index': 40},
+        {'id': 'search*', 'name': 'Search Algorithms', 'display_name': 'Алгоритмы поиска', 'order_index': 50},
+        {'id': 'graph*', 'name': 'Graph Algorithms', 'display_name': 'Графовые алгоритмы', 'order_index': 60},
+        {'id': 'tests', 'name': 'Тестирование', 'display_name': 'Тесты', 'order_index': 70}
     ]
 
     for cat_data in categories:

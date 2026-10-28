@@ -8,7 +8,7 @@ export class ArrayRenderer extends BaseRenderer {
                 await this.createElement(command.params, skipAnimation);
                 break;
             case 'create_elements':
-                this.createElements(command.params.array);
+                await this.createElements(command.params.array, skipAnimation);
                 break;
             case 'move_straight':
                 await this.moveStraight(command.params, skipAnimation);
@@ -28,6 +28,11 @@ export class ArrayRenderer extends BaseRenderer {
             default:
                 throw new Error(`Unknown array component: ${command.component}`);
         }
+    }
+
+    clear() {
+        super.clear();
+        this._pendingReveal = false;
     }
 
     _onSettingsChanged() {
@@ -62,9 +67,7 @@ export class ArrayRenderer extends BaseRenderer {
         element.style.width = `${this.settings.elementSize}px`;
         element.style.height = `${this.settings.elementSize}px`;
         element.style.borderRadius = '8px';
-        element.style.backgroundColor = elemData.color && elemData.color !== 'None'
-            ? elemData.color
-            : 'rgba(224, 224, 224, 0.5)';
+        element.style.backgroundColor = 'rgba(224, 224, 224, 0.5)';
         element.style.display = 'flex';
         element.style.flexDirection = 'column';
         element.style.alignItems = 'center';
@@ -73,7 +76,11 @@ export class ArrayRenderer extends BaseRenderer {
         element.style.fontWeight = 'bold';
         element.style.color = '#333';
         element.style.transition = 'none';
+        element.style.boxShadow = elemData.color && elemData.color !== 'None'
+            ? `0 0 12px 4px ${elemData.color}, 0 0 24px 8px ${elemData.color}`
+            : '0 2px 8px rgba(0,0,0,0.1)';
         element.dataset.defaultBg = 'rgba(224, 224, 224, 0.5)';
+        element.dataset.defaultBs = '0 2px 8px rgba(0,0,0,0.1)';
         element.dataset.baseX = baseX;
         element.dataset.baseY = baseY;
         element.innerHTML = `
@@ -103,10 +110,11 @@ export class ArrayRenderer extends BaseRenderer {
         element.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
         element.style.fontWeight = 'bold';
         element.style.color = '#333';
-        element.style.transition = 'all 0.3s ease-in-out';
+        element.style.transition = 'none';
         element.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         element.style.cursor = 'pointer';
         element.dataset.defaultBg = 'rgba(224, 224, 224, 0.5)';
+        element.dataset.defaultBs = '0 2px 8px rgba(0,0,0,0.1)';
         element.dataset.baseX = x;
         element.dataset.baseY = y;
         element.innerHTML = `
@@ -130,39 +138,101 @@ export class ArrayRenderer extends BaseRenderer {
         this.updateLayout();
     }
 
-    createElements(array) {
+    // --- Создание массива. skipAnimation=true → разом; иначе → раскрытие ---
+    async createElements(array, skipAnimation = false) {
         this.clear();
-        array.forEach((value, index) => {
-            const element = document.createElement('div');
-            element.id = `elem_${index}`;
-            element.className = 'visualization-element';
-            element.style.position = 'absolute';
-            element.style.width = `${this.settings.elementSize}px`;
-            element.style.height = `${this.settings.elementSize}px`;
-            element.style.borderRadius = '4px';
-            element.style.backgroundColor = 'rgba(224, 224, 224, 0.5)';
-            element.style.display = 'flex';
-            element.style.alignItems = 'center';
-            element.style.justifyContent = 'center';
-            element.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
-            element.style.color = '#333';
-            element.style.fontWeight = 'bold';
-            element.style.transition = 'all 0.3s ease-in-out';
-            element.dataset.defaultBg = 'rgba(224, 224, 224, 0.5)';
-            element.dataset.baseX = index * (this.baseElementSize + this.settings.spacing);
-            element.dataset.baseY = 50;
-            element.innerHTML = `
-                <div class="value">${value}</div>
-                ${this.settings.showIndices ? `<div class="index">${index}</div>` : ''}
-            `;
-            this.container.appendChild(element);
-            const indexDiv = element.querySelector('.index');
-            if (indexDiv) indexDiv.style.fontSize = `${Math.max(10, this.settings.elementSize / 4)}px`;
-            const valueDiv = element.querySelector('.value');
-            if (valueDiv) valueDiv.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
-            this.elements.set(`elem_${index}`, element);
-        });
+        if (!array || array.length === 0) return;
+
+        // Создаём все элементы сразу, но в скрытом виде (scale 0).
+        // Показывать будем либо тут же поэтапно, либо позже, когда
+        // структура впервые окажется в видимом контейнере.
+        const created = [];
+        for (let index = 0; index < array.length; index++) {
+            const baseX = index * (this.baseElementSize + this.settings.spacing);
+            const elem = this._createDomElement(
+                { id: `elem_${index}`, value: array[index], color: null },
+                baseX,
+                50,
+            );
+            elem.style.transition = 'none';
+            elem.style.transform = 'scale(0)';
+            this.container.appendChild(elem);
+            this.elements.set(`elem_${index}`, elem);
+            created.push(elem);
+        }
         this.updateLayout();
+
+        const isHidden = this.container.offsetWidth === 0;
+
+        if (skipAnimation) {
+            this._revealAllInstantly(created);
+            return;
+        }
+
+        if (isHidden) {
+            // Структура создана, но ещё не привязана к видимому окну.
+            // Раскроем при первом onBecameVisible.
+            this._pendingReveal = true;
+            return;
+        }
+
+        await this._revealSequentially(created);
+    }
+
+    _revealAllInstantly(elements) {
+        for (const el of elements) {
+            el.style.transition = 'none';
+            el.style.transform = 'scale(1)';
+        }
+        void this.container.offsetHeight;   // применить без анимации
+        for (const el of elements) {
+            el.style.transition = '';
+        }
+    }
+
+    async _revealSequentially(elements) {
+        const n = elements.length;
+        if (n === 0) return;
+
+        const speedFactor = this.settings.speedFactor || 1;
+        const baseStep = Math.min(150, 50 / speedFactor);       // как в legacy
+        const maxTotal = 3000 / speedFactor;     // защита от длинных массивов
+        const step = Math.max(1, Math.min(baseStep, maxTotal / n));
+
+        for (const el of elements) {
+            el.style.transition = 'transform 0.3s ease-in-out';
+        }
+        void this.container.offsetHeight;        // transition должен «зацепиться»
+
+        for (let i = 0; i < n; i++) {
+            elements[i].style.transform = 'scale(1)';
+            await this.sleep(step);
+        }
+    }
+
+    async onBecameVisible(skipAnimation = false) {
+        if (!this._pendingReveal) return;
+        this._pendingReveal = false;
+
+        const elements = Array.from(this.elements.values());
+        if (elements.length === 0) return;
+
+        if (skipAnimation) {
+            this._revealAllInstantly(elements);
+        } else {
+            await this._revealSequentially(elements);
+        }
+    }
+
+    cancelPendingReveal() {
+        if (!this._pendingReveal) return;
+        this._pendingReveal = false;
+
+        // Раскрытие отменяется, но его нужно довести до конца —
+        // иначе элементы останутся в scale(0) и структура не покажется.
+        const elements = Array.from(this.elements.values());
+        if (elements.length === 0) return;
+        this._revealAllInstantly(elements);
     }
 
     async moveStraight(params, skipAnimation = false) {
@@ -311,16 +381,16 @@ export class ArrayRenderer extends BaseRenderer {
 
     async highlight(params, skipAnimation = false) {
         const { element_ids, color, duration = 600, opacity = 1 } = params;
+        const actualDuration = duration / this.settings.speedFactor;
         for (const id of element_ids) {
             const element = this.elements.get(id);
-            if (element) {
-                element.style.backgroundColor = color;
-                element.style.opacity = opacity;
-                element.style.boxShadow = `0 0 8px ${color}`;
-            }
+            if (!element) continue;
+            element.style.transition = `box-shadow ${actualDuration}ms ease`;
+            element.style.opacity = opacity;
+            element.style.boxShadow = `0 0 12px 4px ${color}, 0 0 24px 8px ${color}`;
         }
         if (!skipAnimation) {
-            await this.sleep(duration / this.settings.speedFactor);
+            await this.sleep(actualDuration);
         }
     }
 
@@ -330,11 +400,10 @@ export class ArrayRenderer extends BaseRenderer {
         for (const id of element_ids) {
             const element = this.elements.get(id);
             if (!element) continue;
-            element.style.transition = `all ${actualDuration}ms ease`;
-            const defaultBg = element.dataset.defaultBg || '';
-            element.style.backgroundColor = defaultBg;
+            element.style.transition = `box-shadow ${actualDuration}ms ease`;
+            const defaultBs = element.dataset.defaultBs || '';
             element.style.opacity = 1;
-            element.style.boxShadow = '';
+            element.style.boxShadow = defaultBs;
         }
         if (!skipAnimation) {
             await this.sleep(actualDuration);

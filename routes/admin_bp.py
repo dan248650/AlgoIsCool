@@ -145,7 +145,7 @@ def edit_algorithm(algorithm_id):
     algorithm = Algorithm.query.get_or_404(algorithm_id)
     form = AlgorithmForm()
     if request.method == 'GET':
-        form.name.data = algorithm.name
+        form.name.data = algorithm.id
         form.display_name.data = algorithm.display_name
         form.category_id.data = algorithm.category_id
         form.order_index.data = algorithm.order_index

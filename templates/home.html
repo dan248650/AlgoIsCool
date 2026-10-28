@@ -19,13 +19,16 @@
             <div class="settings-menu" id="settingsMenu">
                 <label for="bgSelect">Фон страницы алгоритма:</label>
                 <select id="bgSelect">
-                    {% set current_bg = (current_user.get_settings()['background_image'] if current_user.is_authenticated else 'tree.jpg') %}
+                    {% set current_bg = (current_user.get_settings()['background_image']['file'] if current_user.is_authenticated else 'white.jpg') %}
                     {% for img in images %}
                         <option value="{{ img }}" {% if img == current_bg %}selected{% endif %}>
                             {{ img }}
                         </option>
                     {% endfor %}
                 </select>
+                <label for="bgSelect">Непрозрачность фона страницы алгоритма:</label>
+                {% set current_value = (current_user.get_settings()['background_image']['opacity'] if current_user.is_authenticated else 0.12) %}
+                <input id="opacitySelect" type="number" min="0" max="1" step="0.01" value="{{ current_value }}">
                 {% if not current_user.is_authenticated %}
                     <p class="settings-hint">Войдите, чтобы сохранить выбор</p>
                 {% endif %}
@@ -90,6 +93,20 @@
 <script type="module">
     import { initAnimation } from '/static/js/utils/animation.js';
 
+    const header = document.querySelector('.MainHeader');
+
+    const updateHeaderHeight = () => {
+        if (header) {
+            const height = header.offsetHeight;
+            document.documentElement.style.setProperty('--header-height', `${height}px`);
+        }
+    };
+
+    const resizeObserver = new ResizeObserver(() => updateHeaderHeight());
+    if (header) {
+        resizeObserver.observe(header);
+    }
+
     async function setupAnimation() {
         try {
             const canvas = document.getElementById('algorithmCanvas');
@@ -108,19 +125,25 @@
         document.getElementById('settingsMenu')?.classList.toggle('show');
     });
 
-    document.getElementById('bgSelect')?.addEventListener('change', async (e) => {
-        const img = e.target.value;
+    const settings_container = document.getElementById('settingsMenu');
+
+    settings_container?.addEventListener('change', async (e) => {
         if (!isAuthenticated) {
             alert('Пожалуйста, войдите в систему, чтобы сохранить настройки');
             return;
         }
-        const response = await fetch('/update_settings', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ background_image: img })
-        });
-        if (!response.ok) {
-            alert('Не удалось сохранить настройки');
+        if (e.target.id === 'opacitySelect' || e.target.id === 'bgSelect') {
+            const img = document.getElementById('bgSelect')?.value;
+            const opacity = document.getElementById('opacitySelect')?.value;
+
+            const response = await fetch('/update_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ background_image: {"file": img, "opacity": opacity} })
+            });
+            if (!response.ok) {
+                alert('Не удалось сохранить настройки');
+            }
         }
     });
 

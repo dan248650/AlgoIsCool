@@ -61,7 +61,8 @@ def api_get_algorithms():
         'name': algo.name,
         'display_name': algo.display_name,
         'category_id': algo.category_id,
-        'input_schema': algo.input_schema
+        'input_schema': algo.input_schema,
+        'definition_python': algo.definition_python
     } for algo in algorithms])
 
 
@@ -81,6 +82,7 @@ def api_get_algorithm(algorithm_id):
         'order_index': algorithm.order_index,
         'default_input_data': algorithm.default_input_data,
         'definition': algorithm.definition,
+        'definition_python': algorithm.definition_python,
         'input_schema': algorithm.input_schema,
         'default_settings': algorithm.default_settings
     })

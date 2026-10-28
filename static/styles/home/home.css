@@ -1,12 +1,21 @@
 /* home.css - главная страница и каталог */
+:root {
+    --header-height: 80px;
+}
 
 html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     background-color: rgb(36, 13, 59);
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
+}
+
+html::-webkit-scrollbar {
+    display: none;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 body {
@@ -16,34 +25,34 @@ body {
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100%;
+    min-height: 100vh;
     position: relative;
     isolation: isolate;
-    overflow: hidden;
 }
 
 body::before {
     content: "";
-    position: absolute;
+    position: fixed;
     top: -5px;
     left: -5px;
     right: -5px;
     bottom: -5px;
-    width: calc(100% + 10px);
-    height: calc(100% + 10px);
+    width: auto;
+    height: auto;
     background: url("/assets/images/background.avif") center/cover no-repeat;
     z-index: -2;
+    will-change: transform;
 }
 
 body::after {
     content: "";
-    position: absolute;
+    position: fixed;
     top: -5px;
     left: -5px;
     right: -5px;
     bottom: -5px;
-    width: calc(100% + 10px);
-    height: calc(100% + 10px);
+    width: auto;
+    height: auto;
     background: rgba(0, 0, 0, 0.7);
     z-index: -1;
 }
@@ -59,6 +68,8 @@ body::after {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: var(--header-height);
+    box-sizing: border-box;
 }
 
 .header-left {
@@ -159,12 +170,14 @@ body::after {
 .MainElements {
     position: relative;
     z-index: 5;
-    padding: 20px 40px;
+    padding: 12px 30px;
     color: white;
-    height: calc(100vh - 80px);
+    height: auto;
     box-sizing: border-box;
     display: flex;
     gap: 60px;
+    height: auto;
+    min-height: calc(100vh - var(--header-height) - 5px);
 }
 
 .MainElements-Left {
@@ -264,6 +277,7 @@ body::after {
     align-items: center;
     justify-content: center;
     min-height: 500px;
+    align-self: stretch;
 }
 
 .Visual {
@@ -376,7 +390,7 @@ body::after {
 }
 
 @media (min-width: 1200px) and (max-width: 1919px) {
-    .MainElements { gap: 60px; padding: 20px 40px; }
+    .MainElements { gap: 60px; }
     .MainElements-Left { flex: 0 0 400px; }
     .Name { font-size: 150px; }
     .Description { font-size: 1.3rem; }
