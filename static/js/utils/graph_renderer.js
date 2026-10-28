@@ -18,13 +18,20 @@ export class GraphRenderer extends BaseRenderer {
         this.canvas.style.width = '100%';
         this.canvas.style.height = '100%';
         this.canvas.style.pointerEvents = 'none';
-        this.container.style.position = 'relative';
+        if (!this.container.style.position) {
+            this.container.style.position = 'relative';
+        }
         this.container.appendChild(this.canvas);
         this.ctx = this.canvas.getContext('2d');
     }
 
     resizeCanvas() {
         const rect = this.container.getBoundingClientRect();
+        if (this.canvas.width === rect.width && this.canvas.height === rect.height) {
+            // Размер не изменился — синхронизируем только рёбра.
+            this.redrawEdges();
+            return;
+        }
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
         this.redrawEdges();
@@ -148,7 +155,7 @@ export class GraphRenderer extends BaseRenderer {
         element.style.width = `${this.settings.elementSize}px`;
         element.style.height = `${this.settings.elementSize}px`;
         element.style.borderRadius = '50%';
-        element.style.backgroundColor = node.color || 'rgba(224, 224, 224, 0.8)';
+        element.style.backgroundColor = 'rgba(224, 224, 224, 0.8)';
         element.style.display = 'flex';
         element.style.alignItems = 'center';
         element.style.justifyContent = 'center';
@@ -156,9 +163,11 @@ export class GraphRenderer extends BaseRenderer {
         element.style.fontWeight = 'bold';
         element.style.color = '#333';
         element.style.transition = 'all 0.3s ease-in-out';
-        element.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        if (node.color) element.style.boxShadow = `0 0 14px 6px ${node.color}, 0 0 28px 12px ${node.color}`;
+        else element.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         element.style.cursor = 'pointer';
         element.dataset.defaultBg = 'rgba(224, 224, 224, 0.8)';
+        element.dataset.defaultBs = '0 2px 8px rgba(0,0,0,0.1)';
         element.dataset.baseX = node.x;
         element.dataset.baseY = node.y;
         element.style.zIndex = '5';
@@ -170,8 +179,7 @@ export class GraphRenderer extends BaseRenderer {
         const { node_id, color, duration = 600 } = params;
         const element = this.elements.get(`node_${node_id}`);
         if (element) {
-            element.style.backgroundColor = color;
-            element.style.boxShadow = `0 0 8px ${color}`;
+            element.style.boxShadow = `0 0 14px 6px ${color}, 0 0 28px 12px ${color}`;
         }
         if (!skipAnimation && duration) {
             await this.sleep(duration / this.settings.speedFactor);
@@ -182,9 +190,8 @@ export class GraphRenderer extends BaseRenderer {
         const { node_id } = params;
         const element = this.elements.get(`node_${node_id}`);
         if (element) {
-            const defaultBg = element.dataset.defaultBg || 'rgba(224, 224, 224, 0.8)';
-            element.style.backgroundColor = defaultBg;
-            element.style.boxShadow = '';
+            const defaultBs = element.dataset.defaultBs || '0 2px 8px rgba(0,0,0,0.1)';
+            element.style.boxShadow = defaultBs;
         }
     }
 

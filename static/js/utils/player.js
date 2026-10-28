@@ -25,7 +25,7 @@ export class VisualizationPlayer {
         for (let i = this.currentIndex; i < this.commands.length && this.isPlaying; i++) {
             const command = this.commands[i];
             if (command) {
-                await this.renderEngine.executeCommand(command);
+                await this.renderEngine.executeCommand(command, false, i);
                 this.currentIndex = i + 1;
                 if (this._onStep) this._onStep(this.currentIndex);
             }

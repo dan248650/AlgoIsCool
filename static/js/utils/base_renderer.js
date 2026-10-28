@@ -1,15 +1,15 @@
 export class BaseRenderer {
-    constructor(containerId) {
-        this.container = document.getElementById(containerId);
+    constructor(container) {
+        this.container = (typeof container === 'string') ? document.getElementById(container) : container;
         this.elements = new Map();                 // id → DOM element (для массивов)
         this.settings = {
             speedFactor: 1.0,
             elementSize: 40,
             spacing: 12,
             colors: {
-                comparing: '#FFA07A',
+                comparing: '#9400D3',
                 swapping: '#FF6B6B',
-                sorted: '#4CAF50',
+                sorted: '#4169E1',
                 default: '#e0e0e0'
             },
             showIndices: true
@@ -20,17 +20,25 @@ export class BaseRenderer {
         this.offsetY = 0;
 
         this.initContainer();
+
+        // Наблюдаем за самим контейнером, а не за окном: размер
+        // контейнера может меняться без события window.resize
+        // (например, при анимации ширины сайдбара).
+        if (typeof ResizeObserver !== 'undefined') {
+            this._resizeObserver = new ResizeObserver(() => {
+                this.updateLayout();
+            });
+            this._resizeObserver.observe(this.container);
+        }
+
+        // Резерв на случай отсутствия ResizeObserver в старых браузерах.
         window.addEventListener('resize', () => this.updateLayout());
     }
 
     initContainer() {
-        this.container.style.position = 'relative';
-        this.container.style.minHeight = '200px';
-        this.container.style.borderRadius = '12px';
-        this.container.style.margin = '20px 0';
-        this.container.style.padding = '10px';
-        this.container.style.overflow = 'visible';
-        this.container.style.width = '100%';
+        if (!this.container.style.position) {
+            this.container.style.position = 'relative';
+        }
     }
 
     // === Единый метод пересчёта позиций (масштабирование + центрирование) ===
@@ -67,6 +75,31 @@ export class BaseRenderer {
             el.style.left = `${screenX + this.offsetX}px`;
             el.style.top = `${screenY + this.offsetY}px`;
         }
+    }
+
+    // Общий шаблон для сценариев, меняющих геометрию контейнера:
+    //   1. отключаем transition;
+    //   2. применяем мутатор (смена классов, перенос DOM, и т.п.);
+    //   3. пересчитываем layout;
+    //   4. синхронно снимаем no-transition.
+    // Класс .no-transition объявлен в CSS глобально.
+    commitLayout(mutator = null) {
+        const root = this.container;
+        if (!root) {
+            if (typeof mutator === 'function') mutator();
+            return;
+        }
+
+        root.classList.add('no-transition');
+        void root.getBoundingClientRect();
+
+        if (typeof mutator === 'function') mutator();
+
+        void root.getBoundingClientRect();
+        if (this.updateLayout) this.updateLayout();
+        void root.getBoundingClientRect();
+
+        root.classList.remove('no-transition');
     }
 
     // === Общие методы ===
@@ -153,7 +186,7 @@ export class BaseRenderer {
     }
 
     // === Диспетчер команд ===
-    async executeCommand(command, skipAnimation = false) {
+    async executeCommand(command, skipAnimation = false, commandIndex = null) {
         console.log('Executing command:', command.component, command.params);
         switch (command.component) {
             case 'wait':
@@ -179,6 +212,16 @@ export class BaseRenderer {
 
     async _onSetVariable(params) {
         // может быть переопределён в наследниках
+    }
+
+    async onBecameVisible(skipAnimation = false) {
+        // Переопределяется в наследниках, которым нужна реакция
+        // на первое появление структуры в видимом контейнере.
+    }
+
+    cancelPendingReveal() {
+        // Переопределяется в наследниках, у которых есть отложенное
+        // раскрытие. По умолчанию — ничего.
     }
 
     async _handleSpecificCommand(command, skipAnimation) {

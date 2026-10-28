@@ -13,6 +13,15 @@ class GraphInterpreter(BaseInterpreter):
         return adj.get(node, [])
 
     def _generate_commands(self, algorithm_definition: Dict, state: Dict, settings: Dict, commands: List) -> None:
+        # Определения нового стиля (через create_structure/create_window)
+        # не нуждаются в legacy-подготовке: layout считает GraphStructure,
+        # а команды создания идут через BaseInterpreter._handle_create_structure.
+        if self._is_new_style_definition(algorithm_definition):
+            return super()._generate_commands(
+                algorithm_definition, state, settings, commands
+            )
+
+        # ---- legacy-путь ----
         nodes = state.get('nodes', [])
         edges = state.get('edges', [])
         directed = state.get('directed', False)
@@ -79,6 +88,19 @@ class GraphInterpreter(BaseInterpreter):
         # выполнение шагов алгоритма (из БД)
         for step in algorithm_definition.get('steps', []):
             self._execute_step(step, state, settings, commands)
+
+    @staticmethod
+    def _is_new_style_definition(algorithm_definition: Dict) -> bool:
+        """
+        Признак нового стиля: в шагах верхнего уровня есть create_structure
+        или create_window. Legacy-описания таких команд не содержат —
+        они используют create_elements/create_graph, добавляемые интерпретатором.
+        """
+        for step in algorithm_definition.get('steps', []):
+            for cmd in step.get('commands', []):
+                if cmd.get('component') in ('create_structure', 'create_window'):
+                    return True
+        return False
 
     def _handle_specific_command(self, command, state, settings, commands):
         component = command['component']
