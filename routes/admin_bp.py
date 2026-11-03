@@ -65,20 +65,22 @@ def admin_dashboard():
     users = User.query.all()
     algorithms = Algorithm.query.order_by(Algorithm.order_index).all()
 
-    return render_template('admin/dashboard.html',
-                           total_users=total_users,
-                           active_users=active_users,
-                           admin_users=admin_users,
-                           total_algorithms=total_algorithms,
-                           db_size=db_size,
-                           db_path=os.path.basename(db_path),
-                           table_stats=table_stats,
-                           system_info=system_info,
-                           memory=memory,
-                           disk=disk,
-                           users=users,
-                           algorithms=algorithms,
-                           now=datetime.now())
+    return render_template(
+        'admin/dashboard.html',
+        total_users=total_users,
+        active_users=active_users,
+        admin_users=admin_users,
+        total_algorithms=total_algorithms,
+        db_size=db_size,
+        db_path=os.path.basename(db_path),
+        table_stats=table_stats,
+        system_info=system_info,
+        memory=memory,
+        disk=disk,
+        users=users,
+        algorithms=algorithms,
+        now=datetime.now(),
+    )
 
 
 @admin_bp.route('/admin/algorithms/add', methods=['GET', 'POST'])
@@ -116,9 +118,8 @@ def add_algorithm():
                 algorithm.definition_python = python_code
             else:
                 definition = {
-                    'type': form.definition_type.data,
                     'initial_state': json.loads(form.definition_initial_state.data) if form.definition_initial_state.data and form.definition_initial_state.data.strip() else {},
-                    'steps': json.loads(form.definition_steps.data)
+                    'steps': json.loads(form.definition_steps.data),
                 }
                 algorithm.definition = definition
                 algorithm.definition_python = None
@@ -157,7 +158,6 @@ def edit_algorithm(algorithm_id):
         form.definition_python.data = algorithm.definition_python
 
         if algorithm.definition:
-            form.definition_type.data = algorithm.definition.get('type', 'array')
             form.definition_initial_state.data = json.dumps(algorithm.definition.get('initial_state', {}), ensure_ascii=False, indent=2)
             form.definition_steps.data = json.dumps(algorithm.definition.get('steps', []), ensure_ascii=False, indent=2)
         else:
@@ -187,9 +187,8 @@ def edit_algorithm(algorithm_id):
                 algorithm.definition_python = python_code
             else:
                 definition = {
-                    'type': form.definition_type.data,
                     'initial_state': json.loads(form.definition_initial_state.data) if form.definition_initial_state.data and form.definition_initial_state.data.strip() else {},
-                    'steps': json.loads(form.definition_steps.data)
+                    'steps': json.loads(form.definition_steps.data),
                 }
                 algorithm.definition = definition
                 algorithm.definition_python = None

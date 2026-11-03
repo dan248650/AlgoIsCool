@@ -17,10 +17,6 @@ class AlgorithmForm(FlaskForm):
     complexity = StringField('Сложность', validators=[Optional(), Length(max=50)])
 
     # Definition (разбит на отдельные поля)
-    definition_type = SelectField('Тип алгоритма', choices=[
-        ('array', 'array (массив)'),
-        ('graph', 'graph (граф)')
-    ], validators=[DataRequired()])
     definition_initial_state = TextAreaField('Начальное состояние (JSON)', validators=[Optional()])
     definition_steps = TextAreaField('Шаги (JSON)', validators=[DataRequired()])
 
@@ -35,7 +31,7 @@ class AlgorithmForm(FlaskForm):
     definition_mode = SelectField('Режим описания', choices=[
         ('low_level', 'Низкоуровневое JSON-описание'),
         ('python', 'Высокоуровневый Python-код')
-    ], default='low_level', validators=[DataRequired()])
+    ], default='python', validators=[DataRequired()])
 
     submit = SubmitField('Сохранить')
 

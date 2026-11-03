@@ -264,6 +264,4 @@ export class GraphRenderer extends BaseRenderer {
         }
         this.redrawEdges();
     }
-
-    async _onSetVariable(params) {}
 }

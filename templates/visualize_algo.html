@@ -1,4 +1,3 @@
-{# templates/visualize_algo.html #}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -122,8 +121,6 @@
     </div>
 
     <script type="module">
-        import { ArrayRenderer } from '/static/js/utils/array_renderer.js';
-        import { GraphRenderer } from '/static/js/utils/graph_renderer.js';
         import { VisualizationPlayer } from '/static/js/utils/player.js';
         import { InputFormHandler } from '/static/js/utils/input_form_handler.js';
         import { SceneRenderer } from '/static/js/utils/scene_renderer.js';
@@ -332,40 +329,19 @@
                 stepValue.textContent = '0';
 
                 // Создаём рендерер и плеер
-                const firstSnap = snapshots && snapshots.length ? snapshots[0] : null;
-                const useSceneRenderer = !!(firstSnap && 'structures' in firstSnap);
-
-                let CurrentRendererClass;
-                if (useSceneRenderer) {
-                    CurrentRendererClass = SceneRenderer;
-                } else if (firstSnap && firstSnap.type === 'graph') {
-                    CurrentRendererClass = GraphRenderer;
-                } else {
-                    CurrentRendererClass = ArrayRenderer;
-                }
                 if (!settings.speed_factor){
                     settings.speed_factor = speedSlider.value;
                 }
                 if (!settings.element_size){
                     settings.element_size = parseInt(elementSizeSlider.value, 10);
                 }
-                currentRenderEngine = new CurrentRendererClass('visualization-area');
+                currentRenderEngine = new SceneRenderer('visualization-area');
                 currentRenderEngine.updateSettings({
                     speedFactor: settings.speed_factor,
                     elementSize: settings.element_size
                 });
-
-                if (useSceneRenderer && currentRenderEngine.setSnapshots) {
-                    currentRenderEngine.setSnapshots(snapshots);
-                }
-
-                if (useSceneRenderer) {
-                        buildWindowTabs(snapshots, currentRenderEngine);
-                } else {
-                    const tabsEl = document.getElementById('window-tabs');
-                    tabsEl.style.display = 'none';
-                    tabsEl.innerHTML = '';
-                }
+                currentRenderEngine.setSnapshots(snapshots);
+                buildWindowTabs(snapshots, currentRenderEngine);
 
                 currentPlayer = new VisualizationPlayer(currentRenderEngine);
                 currentPlayer.onStep = (stepIndex) => {

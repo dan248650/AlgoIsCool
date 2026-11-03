@@ -109,8 +109,7 @@ def api_next_algorithm(algorithm_id):
 @algo_bp.route('/api/visualize', methods=['POST'])
 def api_visualize():
     """Выполнить визуализацию алгоритма"""
-    from visualization.array_interpreter import ArrayInterpreter
-    from visualization.graph_interpreter import GraphInterpreter
+    from visualization.base_interpreter import BaseInterpreter
 
     data = request.json
     algorithm_id = data.get('algorithm_id')
@@ -119,19 +118,12 @@ def api_visualize():
 
     algorithm = Algorithm.query.get_or_404(algorithm_id)
     definition = algorithm.definition
-    algo_type = definition.get('type', 'array')
+    if not definition:
+        return jsonify({'error': 'Algorithm definition not generated'}), 400
 
-    if algo_type == 'graph':
-        interpreter = GraphInterpreter()
-    else:
-        interpreter = ArrayInterpreter()
-
+    interpreter = BaseInterpreter()
     try:
-        result = interpreter.execute_algorithm(
-            algorithm.definition,
-            input_data,
-            settings
-        )
+        result = interpreter.execute_algorithm(definition, input_data, settings)
         return jsonify({
             'commands': result['commands'],
             'snapshots': result['snapshots']

@@ -131,87 +131,16 @@ export class BaseRenderer {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async showConditionResult(params, result) {
-        const { condition } = params;
-        const notification = document.createElement('div');
-        notification.className = 'condition-notification';
-        notification.textContent = result ? `False ${condition}` : `True ${condition}`;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${result ? '#4CAF50' : '#f44336'};
-            color: white;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: monospace;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        `;
-        document.body.appendChild(notification);
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300 / this.settings.speedFactor);
-        }, 1500 / this.settings.speedFactor);
-        return Promise.resolve();
-    }
-
-    async showVariableSet(params) {
-        const { variable, value } = params;
-        const notification = document.createElement('div');
-        notification.className = 'variable-notification';
-        notification.textContent = `${variable} = ${value}`;
-        notification.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #2196F3;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: monospace;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        `;
-        document.body.appendChild(notification);
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300 / this.settings.speedFactor);
-        }, 1500 / this.settings.speedFactor);
-        return Promise.resolve();
-    }
-
     // === Диспетчер команд ===
     async executeCommand(command, skipAnimation = false, commandIndex = null) {
         console.log('Executing command:', command.component, command.params);
         switch (command.component) {
-            case 'wait':
-                await this.sleep(command.params.duration / this.settings.speedFactor);
-                break;
-            case 'condition_true':
-                await this.showConditionResult(command.params, true);
-                break;
-            case 'condition_false':
-                await this.showConditionResult(command.params, false);
-                break;
-            case 'set_variable':
-                await this.showVariableSet(command.params);
-                await this._onSetVariable(command.params);
-                break;
             case 'update_settings':
                 this.updateSettings(command.params);
                 break;
             default:
                 await this._handleSpecificCommand(command, skipAnimation);
         }
-    }
-
-    async _onSetVariable(params) {
-        // может быть переопределён в наследниках
     }
 
     async onBecameVisible(skipAnimation = false) {

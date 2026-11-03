@@ -567,21 +567,8 @@ def generate_low_level_from_python(python_code: str, input_data: Dict, settings:
     except SyntaxError as e:
         raise RuntimeError(f"Ошибка синтаксиса: {e}")
 
-    # Определяем тип алгоритма
-    algo_type = "array"
-    for cmd in commands:
-        if cmd.get("component") == "create_structure" and cmd.get("type") == "graph":
-            algo_type = "graph"
-            break
-
     definition = {
-        "type": algo_type,
         "initial_state": {},  # интерпретатор возьмёт всё из input_data
-        "steps": [
-            {
-                "name": "Выполнение алгоритма",
-                "commands": commands
-            }
-        ]
+        "steps": [{"name": "Выполнение алгоритма", "commands": commands}],
     }
     return definition

@@ -14,9 +14,7 @@ class BaseInterpreter:
             'range': lambda *args: list(range(*args)),
             'increment': lambda x: x + 1,
             'decrement': lambda x: x - 1,
-            'get_element_position': self.get_element_position,
             'swap': self._swap_array_elements,
-            'neighbors': self._get_neighbors
         }
         self._base_element_size = 40
         self._command_counter = 0
@@ -31,12 +29,6 @@ class BaseInterpreter:
         result = array.copy()
         result[i1], result[i2] = result[i2], result[i1]
         return result
-
-    def _get_neighbors(self, state, node):
-        return []
-
-    def get_element_position(self, element_id: str, state: dict) -> dict:
-        return {'x': state.get(f'{element_id}_x', 0), 'y': state.get(f'{element_id}_y', 0)}
 
     def _merge_settings(self, default: Dict, user: Dict) -> Dict:
         result = default.copy() if default else {}
@@ -58,7 +50,7 @@ class BaseInterpreter:
                 if full:
                     return self._evaluate_expression(full.group(1).strip(), state)
 
-                # Частичное: 'elem_{{i}}' → склейка строк (прежнее поведение)
+                # Частичное: 'elem_{{i}}' → склейка строк
                 def replacer(match):
                     expr = match.group(1).strip()
                     result = self._evaluate_expression(expr, state)
@@ -204,8 +196,6 @@ class BaseInterpreter:
 
             # name(...) — глобальная функция.
             if head in self.functions:
-                if head == 'neighbors':
-                    return self.functions[head](state, *args)
                 return self.functions[head](*args)
             if head == 'len':
                 if len(args) != 1:
@@ -322,22 +312,12 @@ class BaseInterpreter:
         command_index = self._command_counter
         self._command_counter += 1
         commands.append(command)
-
-        # Если в текущем прогоне уже появились окна/структуры — мы в новом
-        # стиле, снапшот должен быть глобальным. Иначе — legacy-путь для
-        # старых описаний (linear-search, bubble-sort и т.п.), которые
-        # работают через _handle_specific_command и не создают Structure.
-        if self.structures or self.windows:
-            self._save_global_snapshot(command_index)
-        else:
-            self._save_snapshot(state, command_index)
+        self._save_global_snapshot(command_index)
 
     def _save_global_snapshot(self, command_index: int) -> None:
         """
         Полная картина после команды с номером command_index:
-        все окна + все структуры. Формат отличается от легаси-снапшота
-        (там был один 'type' сверху). Различать их фронт будет по наличию
-        ключа 'structures'.
+        все окна + все структуры.
         """
         snapshot = {
             'commandIndex': command_index,
@@ -375,9 +355,6 @@ class BaseInterpreter:
     def _add_command_no_snapshot(self, command: Dict, commands: List) -> None:
         self._command_counter += 1
         commands.append(command)
-
-    def _save_snapshot(self, state: Dict, command_index: int) -> None:
-        raise NotImplementedError
 
     def _execute_step(self, step: Dict, state: Dict, settings: Dict, commands: List) -> None:
         for cmd in step['commands']:
@@ -428,10 +405,7 @@ class BaseInterpreter:
             raw = structure.handle(command['component'], params)
             self._record_structure_commands(raw, commands)
         else:
-            self._handle_specific_command(command, state, settings, commands)
-
-    def _handle_specific_command(self, command, state, settings, commands):
-        raise ValueError(f"Unknown component: {command['component']}")
+            raise ValueError(f"Unknown component: {component}")
 
     def _handle_while_loop(self, command, state, settings, commands):
         condition = command['condition']
@@ -702,8 +676,5 @@ class BaseInterpreter:
         return {'commands': commands, 'snapshots': self._snapshots}
 
     def _generate_commands(self, algorithm_definition, state, settings, commands):
-        """Базовая реализация: просто выполняет шаги по порядку.
-        Legacy-интерпретаторы (Array/Graph) переопределяют это для своей
-        подготовки — layout, _adjacency и т.п."""
         for step in algorithm_definition['steps']:
             self._execute_step(step, state, settings, commands)

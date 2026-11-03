@@ -18,6 +18,7 @@ export class SceneRenderer {
 
         this.activeTab = 'all';   // 'all' | 'window:<id>'
         this.onWindowsChanged = null;
+        this._notificationContainer = null;
 
         this.settings = {
             speedFactor: 1.0,
@@ -48,6 +49,10 @@ export class SceneRenderer {
         for (const w of this.windows.values()) w.remove();
         this.windows.clear();
         this.container.innerHTML = '';
+        if (this._notificationContainer) {
+            this._notificationContainer.remove();
+            this._notificationContainer = null;
+        }
     }
 
     // ---------- Восстановление всей картины ----------
@@ -383,15 +388,36 @@ export class SceneRenderer {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    _ensureNotificationContainer() {
+        if (this._notificationContainer) return this._notificationContainer;
+        const c = document.createElement('div');
+        c.className = 'scene-notification-container';
+        document.body.appendChild(c);
+        this._notificationContainer = c;
+        return c;
+    }
+
     async _notify(text, positive) {
         if (!text) return;
+        const container = this._ensureNotificationContainer();
+
         const n = document.createElement('div');
         n.className = 'scene-notification';
-        n.textContent = text;
-        if (positive === true) n.style.background = '#4CAF50';
-        else if (positive === false) n.style.background = '#f44336';
-        else n.style.background = '#2196F3';
-        document.body.appendChild(n);
+
+        if (positive === true) {
+            n.textContent = '✓ ' + text;
+            n.style.background = '#4CAF50';
+        } else if (positive === false) {
+            n.textContent = '✗ ' + text;
+            n.style.background = '#f44336';
+        } else {
+            n.textContent = text;
+            n.style.background = '#2196F3';
+        }
+
+        n.style.opacity = '1';
+        container.appendChild(n);
+
         setTimeout(() => {
             n.style.opacity = '0';
             setTimeout(() => n.remove(), 300);

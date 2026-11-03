@@ -4,14 +4,8 @@ export class ArrayRenderer extends BaseRenderer {
     // --- Специфические методы для массивов ---
     async _handleSpecificCommand(command, skipAnimation) {
         switch (command.component) {
-            case 'create_element':
-                await this.createElement(command.params, skipAnimation);
-                break;
             case 'create_elements':
                 await this.createElements(command.params.array, skipAnimation);
-                break;
-            case 'move_straight':
-                await this.moveStraight(command.params, skipAnimation);
                 break;
             case 'highlight':
                 await this.highlight(command.params, skipAnimation);
@@ -93,51 +87,6 @@ export class ArrayRenderer extends BaseRenderer {
     }
 
     // --- Базовые команды массива ---
-    async createElement(params, skipAnimation = false) {
-        const { id, value, x, y } = params;
-        const element = document.createElement('div');
-        element.id = id;
-        element.className = 'visualization-element';
-        element.style.position = 'absolute';
-        element.style.width = `${this.settings.elementSize}px`;
-        element.style.height = `${this.settings.elementSize}px`;
-        element.style.borderRadius = '8px';
-        element.style.backgroundColor = 'rgba(224, 224, 224, 0.5)';
-        element.style.display = 'flex';
-        element.style.flexDirection = 'column';
-        element.style.alignItems = 'center';
-        element.style.justifyContent = 'center';
-        element.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
-        element.style.fontWeight = 'bold';
-        element.style.color = '#333';
-        element.style.transition = 'none';
-        element.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-        element.style.cursor = 'pointer';
-        element.dataset.defaultBg = 'rgba(224, 224, 224, 0.5)';
-        element.dataset.defaultBs = '0 2px 8px rgba(0,0,0,0.1)';
-        element.dataset.baseX = x;
-        element.dataset.baseY = y;
-        element.innerHTML = `
-            <div class="value">${value}</div>
-            ${this.settings.showIndices ? `<div class="index" style="font-size: 10px; color: #888;">${id.split('_')[1]}</div>` : ''}
-        `;
-        this.container.appendChild(element);
-        this.elements.set(id, element);
-
-        const indexDiv = element.querySelector('.index');
-        if (indexDiv) indexDiv.style.fontSize = `${Math.max(10, this.settings.elementSize / 4)}px`;
-
-        if (!skipAnimation) {
-            element.style.transform = 'scale(0)';
-            await this.sleep(50);
-            element.style.transform = 'scale(1)';
-            element.style.transition = '';
-        } else {
-            element.style.transform = 'scale(1)';
-        }
-        this.updateLayout();
-    }
-
     // --- Создание массива. skipAnimation=true → разом; иначе → раскрытие ---
     async createElements(array, skipAnimation = false) {
         this.clear();

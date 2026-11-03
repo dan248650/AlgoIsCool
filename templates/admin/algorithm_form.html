@@ -104,16 +104,6 @@
         <div id="lowLevelBlock" style="display: {% if form.definition_mode.data == 'low_level' %}block{% else %}none{% endif %};">
             <!-- Definition -->
             <h3>Definition (структура алгоритма)</h3>
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    {{ form.definition_type.label }} *
-                    {{ form.definition_type(class="form-control") }}
-                    {% for error in form.definition_type.errors %}
-                        <p class="alert alert-danger">{{ error }}</p>
-                    {% endfor %}
-                </div>
-            </div>
-
             <div class="form-group">
                 {{ form.definition_initial_state.label }}
                 {{ form.definition_initial_state(class="form-control", rows="3", placeholder='{"array": "input_array", "n": "length(input_array)"}') }}
