@@ -205,9 +205,15 @@ def add_bfs():
         default_input_data=default_input,
         input_schema={
             "nodes": "graph_nodes",
-            "edges": "graph_edges",
+            "edges": {
+                "type": "graph_edges",
+                "depends_on": "nodes",
+            },
             "directed": "boolean",
-            "start_node": "number",
+            "start_node": {
+                "type": "number",
+                "depends_on": "nodes",
+            },
         },
         default_settings=default_settings,
         definition=definition,
@@ -271,9 +277,15 @@ def add_dfs():
         default_input_data=default_input,
         input_schema={
             "nodes": "graph_nodes",
-            "edges": "graph_edges",
+            "edges": {
+                "type": "graph_edges",
+                "depends_on": "nodes",
+            },
             "directed": "boolean",
-            "start_node": "number",
+            "start_node": {
+                "type": "number",
+                "depends_on": "nodes",
+            },
         },
         default_settings=default_settings,
         definition=definition,
@@ -604,8 +616,15 @@ def add_tree_bfs():
         default_input_data=default_input,
         input_schema={
             "nodes": "graph_nodes",
-            "edges": "graph_edges",
-            "start_node": "number",
+            "edges": {
+                "type": "graph_edges",
+                "depends_on": "nodes",
+                "constraints": {"no_cycles": True, "connected": True},
+            },
+            "start_node": {
+                "type": "number",
+                "depends_on": "nodes",
+            },
         },
         default_settings=default_settings,
         definition=definition,
