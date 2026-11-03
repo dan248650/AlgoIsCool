@@ -86,7 +86,10 @@ export class GraphRenderer extends BaseRenderer {
     async _handleSpecificCommand(command, skipAnimation) {
         switch (command.component) {
             case 'create_graph':
-                this._handleCreateGraph(command.params);
+                if (command.params) this._handleCreateGraph(command.params);
+                break;
+            case 'replace_graph':
+                if (command.params) this._handleReplaceGraph(command.params);
                 break;
             case 'highlight_node':
                 await this._handleHighlightNode(command.params, skipAnimation);
@@ -109,6 +112,7 @@ export class GraphRenderer extends BaseRenderer {
     }
 
     _handleCreateGraph(params) {
+        if (!params || !Array.isArray(params.nodes)) return;
         this.clear();
         const { nodes, edges, directed } = params;
         this.directed = directed;
@@ -120,7 +124,7 @@ export class GraphRenderer extends BaseRenderer {
         }
 
         this.edges.clear();
-        for (const edge of edges) {
+        for (const edge of (Array.isArray(edges) ? edges : [])) {
             const key = this._edgeKey(edge.from, edge.to);
             this.edges.set(key, {
                 from: edge.from,
@@ -131,6 +135,61 @@ export class GraphRenderer extends BaseRenderer {
                 directed: this.directed
             });
         }
+        this.updateLayout();
+    }
+
+    _handleReplaceGraph(params) {
+        if (!params || !Array.isArray(params.nodes)) return;
+        const { nodes, edges, directed } = params;
+        this.directed = directed;
+
+        // Добавляем/обновляем узлы
+        const newNodeIds = new Set();
+        for (const node of nodes) {
+            newNodeIds.add(node.id);
+            const key = `node_${node.id}`;
+            let el = this.elements.get(key);
+            if (el) {
+                // Обновляем позицию и цвет
+                el.dataset.baseX = node.x;
+                el.dataset.baseY = node.y;
+                if (node.color) {
+                    el.style.boxShadow = `0 0 14px 6px ${node.color}, 0 0 28px 12px ${node.color}`;
+                } else {
+                    el.style.boxShadow = el.dataset.defaultBs || '0 2px 8px rgba(0,0,0,0.1)';
+                }
+                const valueDiv = el.querySelector('.value');
+                if (valueDiv) valueDiv.textContent = node.label;
+            } else {
+                el = this._createNodeElement(node);
+                this.container.appendChild(el);
+                this.elements.set(key, el);
+            }
+        }
+
+        // Удаляем узлы, которых больше нет
+        for (const [key, el] of Array.from(this.elements.entries())) {
+            const id = parseInt(key.replace('node_', ''), 10);
+            if (!newNodeIds.has(id)) {
+                el.remove();
+                this.elements.delete(key);
+            }
+        }
+
+        // Обновляем рёбра
+        this.edges.clear();
+        for (const edge of (Array.isArray(edges) ? edges : [])) {
+            const key = this._edgeKey(edge.from, edge.to);
+            this.edges.set(key, {
+                from: edge.from,
+                to: edge.to,
+                color: edge.color || null,
+                label: edge.label || null,
+                element: null,
+                directed: this.directed,
+            });
+        }
+
         this.updateLayout();
     }
 
@@ -228,7 +287,7 @@ export class GraphRenderer extends BaseRenderer {
     }
 
     applySnapshot(snapshot) {
-        if (!snapshot || snapshot.type !== 'graph') return;
+        if (!snapshot || (snapshot.type !== 'graph' && snapshot.type !== 'tree')) return;
         this.clear();
         const { nodes, edges, directed } = snapshot;
         this.directed = directed !== undefined ? directed : false;

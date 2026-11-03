@@ -5,6 +5,16 @@ from visualization.window import Window
 from visualization.structure import create_structure
 
 
+class _BreakLoop(Exception):
+    """Внутренний сигнал: выйти из ближайшего цикла."""
+    pass
+
+
+class _ContinueLoop(Exception):
+    """Внутренний сигнал: перейти к следующей итерации ближайшего цикла."""
+    pass
+
+
 class BaseInterpreter:
     def __init__(self):
         self.functions = {
@@ -24,6 +34,8 @@ class BaseInterpreter:
         self.variables = {}  # пользовательские переменные (int, str, list, dict, ...)
         self.windows = {}  # {window_id: Window}
         self.structures = {}  # {structure_name: Structure}
+
+        self._loop_depth = 0
 
     def _swap_array_elements(self, array, i1, i2):
         result = array.copy()
@@ -112,6 +124,49 @@ class BaseInterpreter:
                     result.append(None)
             return result
 
+        # Литерал словаря: {"key": value, ...}
+        if expr.startswith('{') and expr.endswith('}'):
+            inner = expr[1:-1].strip()
+            if inner == '':
+                return {}
+            result = {}
+            current = ''
+            depth = 0
+            in_string = False
+            quote_char = None
+            for ch in inner:
+                if in_string:
+                    current += ch
+                    if ch == quote_char:
+                        in_string = False
+                        quote_char = None
+                elif ch in '"\'':
+                    in_string = True
+                    quote_char = ch
+                    current += ch
+                elif ch in '([{':
+                    depth += 1
+                    current += ch
+                elif ch in ')]}':
+                    depth -= 1
+                    current += ch
+                elif ch == ',' and depth == 0:
+                    self._add_dict_item(result, current, state)
+                    current = ''
+                else:
+                    current += ch
+            if current.strip():
+                self._add_dict_item(result, current, state)
+            return result
+
+        # Python-литералы True / False / None
+        if expr == 'True':
+            return True
+        if expr == 'False':
+            return False
+        if expr == 'None':
+            return None
+
         if expr in state:
             return state[expr]
         try:
@@ -142,8 +197,9 @@ class BaseInterpreter:
                         if isinstance(left, (int, float)) and isinstance(right, (int, float)) and right != 0:
                             return left / right
 
-        # Доступ по индексу
-        array_match = re.match(r'^(\w+)\[([^\]]+)\]$', expr)
+        # Доступ по индексу: сначала простой случай arr[i]
+        # (в индексе допускаются отрицательные значения — arr[-1]).
+        array_match = re.match(r'^(\w+)\[([^\[\]:]+)\]$', expr)
         if array_match:
             var_name = array_match.group(1)
             index_expr = array_match.group(2)
@@ -151,6 +207,24 @@ class BaseInterpreter:
             index = self._evaluate_expression(index_expr, state)
             if isinstance(array, list) and isinstance(index, int):
                 return array[index]
+            if isinstance(array, dict):
+                return array[index]
+
+        # Доступ по индексу результата метода: obj.method(args)[i]
+        # (например, t.children_of(current)[-1]).
+        method_index_match = re.match(
+            r'^([A-Za-z_]\w*\.[A-Za-z_]\w*\([^()]*\))\[([^\[\]:]+)\]$',
+            expr
+        )
+        if method_index_match:
+            call_expr = method_index_match.group(1)
+            index_expr = method_index_match.group(2)
+            container = self._evaluate_expression(call_expr, state)
+            index = self._evaluate_expression(index_expr, state)
+            if isinstance(container, list) and isinstance(index, int):
+                return container[index]
+            if isinstance(container, dict):
+                return container[index]
 
         # Срезы
         slice_match = re.match(r'^(\w+)\[([^\[\]]*):([^\[\]]*)\]$', expr)
@@ -276,8 +350,37 @@ class BaseInterpreter:
 
         return head, method, args
 
+    def _add_dict_item(self, target_dict, pair_expr, state):
+        """Разбирает одну пару 'key: value' и кладёт в словарь."""
+        if ':' not in pair_expr:
+            return
+        key_expr, value_expr = pair_expr.split(':', 1)
+        key_expr = key_expr.strip()
+        # Ключ — обычно строковый литерал или идентификатор
+        if (key_expr.startswith('"') and key_expr.endswith('"')) or \
+           (key_expr.startswith("'") and key_expr.endswith("'")):
+            key = key_expr[1:-1]
+        else:
+            key = self._evaluate_expression(key_expr, state)
+            if not isinstance(key, str):
+                key = str(key)
+        target_dict[key] = self._evaluate_expression(value_expr.strip(), state)
+
     def _evaluate_condition(self, condition: str, state: Dict) -> bool:
         condition = condition.strip()
+
+        # Логические операторы. Порядок важен:
+        #   ' or ' / ' and ' проверяем РАНЬШЕ, чем ' in ' / ' not in ',
+        #   чтобы 'a not in b and c not in d' не разрезалось по ' not in '.
+        if ' or ' in condition:
+            parts = condition.split(' or ')
+            return any(self._evaluate_condition(p.strip(), state) for p in parts)
+        if ' and ' in condition:
+            parts = condition.split(' and ')
+            return all(self._evaluate_condition(p.strip(), state) for p in parts)
+        if condition.startswith('not '):
+            return not self._evaluate_condition(condition[4:].strip(), state)
+
         if ' not in ' in condition:
             parts = condition.split(' not in ')
             left = self._evaluate_expression(parts[0].strip(), state)
@@ -377,6 +480,14 @@ class BaseInterpreter:
             self._handle_set_attr(command, state, settings, commands)
         elif component == 'multi_assign':
             self._handle_multi_assign(command, state, settings, commands)
+        elif component == 'break_loop':
+            if self._loop_depth == 0:
+                raise ValueError("'break' вне цикла")
+            raise _BreakLoop()
+        elif component == 'continue_loop':
+            if self._loop_depth == 0:
+                raise ValueError("'continue' вне цикла")
+            raise _ContinueLoop()
         elif component == 'wait':
             processed_params = self._substitute_templates(command['params'], state)
             processed_params = self._apply_settings(processed_params, settings)
@@ -409,18 +520,36 @@ class BaseInterpreter:
 
     def _handle_while_loop(self, command, state, settings, commands):
         condition = command['condition']
-        while self._evaluate_condition(condition, state):
-            for subcmd in command['commands']:
-                self._execute_command(subcmd, state, settings, commands)
+        self._loop_depth += 1
+        try:
+            while self._evaluate_condition(condition, state):
+                try:
+                    for subcmd in command['commands']:
+                        self._execute_command(subcmd, state, settings, commands)
+                except _ContinueLoop:
+                    continue
+                except _BreakLoop:
+                    break
+        finally:
+            self._loop_depth -= 1
 
     def _handle_for_each(self, command, state, settings, commands):
         items_expr = command['items']
         variable = command['variable']
         items = self._evaluate_expression(items_expr, state)
-        for item in items:
-            state[variable] = item
-            for subcmd in command['commands']:
-                self._execute_command(subcmd, state, settings, commands)
+        self._loop_depth += 1
+        try:
+            for item in items:
+                state[variable] = item
+                try:
+                    for subcmd in command['commands']:
+                        self._execute_command(subcmd, state, settings, commands)
+                except _ContinueLoop:
+                    continue
+                except _BreakLoop:
+                    break
+        finally:
+            self._loop_depth -= 1
 
     def _handle_condition(self, command, state, settings, commands):
         condition = command['condition']
@@ -595,7 +724,9 @@ class BaseInterpreter:
         structure = create_structure(type_name, data, name=name)
         self.structures[name] = structure
 
-        initial_component = 'create_graph' if type_name == 'graph' else 'create_elements'
+        initial_component = (
+            'create_graph' if type_name in ('graph', 'tree') else 'create_elements'
+        )
         raw = structure.handle(initial_component, {})
         self._record_structure_commands(raw, commands)
 

@@ -8,7 +8,9 @@ from config import Config
 # Импортируем модели и БД
 from data.db import db
 from data.algorithm import (Algorithm, add_linear_search, add_bubble_sort,
-                            add_bfs, add_dfs, add_kadane)
+                            add_bfs, add_dfs, add_kadane,
+                            add_bst_build, add_bst_search, add_tree_bfs,
+                            )
 from data.category import init_categories
 
 # Импортируем маршруты
@@ -83,6 +85,9 @@ def init_algorithms():
     update_or_create(add_bfs)
     update_or_create(add_dfs)
     update_or_create(add_kadane)
+    update_or_create(add_bst_build)
+    update_or_create(add_bst_search)
+    update_or_create(add_tree_bfs)
     db.session.commit()
 
 

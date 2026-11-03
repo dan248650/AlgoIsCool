@@ -5,6 +5,7 @@ import { WindowRenderer } from './window_renderer.js';
 const RENDERER_BY_TYPE = {
     'vector': ArrayRenderer,
     'graph': GraphRenderer,
+    'tree': GraphRenderer,
 };
 
 export class SceneRenderer {
@@ -167,7 +168,13 @@ export class SceneRenderer {
         // Команды, адресованные структуре
         if (command.structure) {
             if (!this.renderers.has(command.structure)) {
-                const type = command.component === 'create_graph' ? 'graph' : 'vector';
+                // Тип берём из снапшота — так дерево (которое тоже
+                // порождает create_graph) не спутается с графом.
+                const snap = this.snapshots[commandIndex ?? 0];
+                const frag = snap && snap.structures
+                    ? snap.structures[command.structure] : null;
+                const type = frag?.type
+                    || (command.component === 'create_graph' ? 'graph' : 'vector');
                 this._ensureRenderer(command.structure, type, commandIndex);
             }
             const r = this.renderers.get(command.structure);

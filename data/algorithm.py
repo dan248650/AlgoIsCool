@@ -357,3 +357,258 @@ def add_kadane():
         definition_python=python_code,
         definition_mode='python',
     )
+
+
+# ============================================================
+# Построение BST (двоичного дерева поиска)
+# ============================================================
+
+def add_bst_build():
+    python_code = (
+        'w = Window("main")\n'
+        'root_id = input_array[0]\n'
+        'root_node = {"id": root_id, "label": str(root_id)}\n'
+        't = Tree(nodes=[root_node], edges=[], root_id=root_id, layout="hierarchical")\n'
+        'w.attach(t)\n'
+        't.highlight_node(root_id, "green")\n'
+        'wait(300)\n'
+        '\n'
+        'for i in range(1, len(input_array)):\n'
+        '    value = input_array[i]\n'
+        '    current = root_id\n'
+        '    while True:\n'
+        '        t.highlight_node(current, "yellow")\n'
+        '        wait(200)\n'
+        '        cv = t.value_of(current)\n'
+        '        children = t.children_of(current)\n'
+        '        if value < cv:\n'
+        '            if len(children) > 0:\n'
+        '                if t.value_of(children[0]) < cv:\n'
+        '                    t.unhighlight_node(current)\n'
+        '                    current = children[0]\n'
+        '                    continue\n'
+        '            t.add_child(current, value, str(value))\n'
+        '            t.highlight_node(t.children_of(current)[0], "green")\n'
+        '            t.unhighlight_node(current)\n'
+        '            wait(300)\n'
+        '            break\n'
+        '        elif value > cv:\n'
+        '            if len(children) > 0:\n'
+        '                last = children[-1]\n'
+        '                if t.value_of(last) > cv:\n'
+        '                    t.unhighlight_node(current)\n'
+        '                    current = last\n'
+        '                    continue\n'
+        '            t.add_child(current, value, str(value))\n'
+        '            t.highlight_node(t.children_of(current)[-1], "green")\n'
+        '            t.unhighlight_node(current)\n'
+        '            wait(300)\n'
+        '            break\n'
+        '        else:\n'
+        '            if len(children) > 0:\n'
+        '                last = children[-1]\n'
+        '                if t.value_of(last) >= cv:\n'
+        '                    t.unhighlight_node(current)\n'
+        '                    current = last\n'
+        '                    continue\n'
+        '            t.add_child(current, value, str(value))\n'
+        '            t.highlight_node(t.children_of(current)[-1], "green")\n'
+        '            t.unhighlight_node(current)\n'
+        '            wait(300)\n'
+        '            break\n'
+    )
+    default_input = {"input_array": [50, 30, 70, 20, 40, 60, 80, 35, 45]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="bst-build",
+        name="Построение BST",
+        display_name="Построение двоичного дерева поиска",
+        category_id="graph",
+        description_short="Построение бинарного дерева поиска из массива",
+        description_full="Каждый элемент массива вставляется в BST по правилу: меньше — налево, больше — направо, дубликат — направо. Дерево растёт и перестраивается автоматически.",
+        complexity="O(n log n) в среднем",
+        icon="tree",
+        order_index=50,
+        default_input_data=default_input,
+        input_schema={"input_array": "array"},
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+# ============================================================
+# Поиск в BST
+# ============================================================
+
+def add_bst_search():
+    python_code = (
+        'w = Window("main")\n'
+        'root_id = input_array[0]\n'
+        'root_node = {"id": root_id, "label": str(root_id)}\n'
+        't = Tree(nodes=[root_node], edges=[], root_id=root_id, layout="hierarchical")\n'
+        'w.attach(t)\n'
+        '\n'
+        '# Мгновенное построение BST\n'
+        'for i in range(1, len(input_array)):\n'
+        '    value = input_array[i]\n'
+        '    current = root_id\n'
+        '    while True:\n'
+        '        cv = t.value_of(current)\n'
+        '        children = t.children_of(current)\n'
+        '        if value < cv:\n'
+        '            if len(children) > 0:\n'
+        '                if t.value_of(children[0]) < cv:\n'
+        '                    current = children[0]\n'
+        '                    continue\n'
+        '            t.add_child(current, value, str(value))\n'
+        '            break\n'
+        '        elif value > cv:\n'
+        '            if len(children) > 0:\n'
+        '                if t.value_of(children[-1]) > cv:\n'
+        '                    current = children[-1]\n'
+        '                    continue\n'
+        '            t.add_child(current, value, str(value))\n'
+        '            break\n'
+        '        else:\n'
+        '            if len(children) > 0:\n'
+        '                if t.value_of(children[-1]) >= cv:\n'
+        '                    current = children[-1]\n'
+        '                    continue\n'
+        '            t.add_child(current, value, str(value))\n'
+        '            break\n'
+        '\n'
+        'wait(300)\n'
+        '\n'
+        '# Поиск target с подсветкой пути\n'
+        'current = root_id\n'
+        'found = False\n'
+        'while True:\n'
+        '    t.highlight_node(current, "yellow")\n'
+        '    wait(300)\n'
+        '    if t.value_of(current) == target:\n'
+        '        t.highlight_path(root_id, current, "green")\n'
+        '        wait(600)\n'
+        '        found = True\n'
+        '        break\n'
+        '    cv = t.value_of(current)\n'
+        '    children = t.children_of(current)\n'
+        '    if target < cv:\n'
+        '        if len(children) > 0:\n'
+        '            if t.value_of(children[0]) < cv:\n'
+        '                t.unhighlight_node(current)\n'
+        '                current = children[0]\n'
+        '                continue\n'
+        '        break\n'
+        '    else:\n'
+        '        if len(children) > 0:\n'
+        '            if t.value_of(children[-1]) >= cv:\n'
+        '                t.unhighlight_node(current)\n'
+        '                current = children[-1]\n'
+        '                continue\n'
+        '        break\n'
+        '\n'
+        'if not found:\n'
+        '    t.highlight_node(current, "red")\n'
+        '    wait(600)\n'
+    )
+    default_input = {
+        "input_array": [50, 30, 70, 20, 40, 60, 80],
+        "target": 40,
+    }
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="bst-search",
+        name="Поиск в BST",
+        display_name="Поиск в двоичном дереве поиска",
+        category_id="graph",
+        description_short="Поиск элемента в BST с подсветкой пути",
+        description_full="На каждом шаге сравниваем значение с текущим узлом: идём влево, вправо или останавливаемся. При успехе подсвечивается весь путь от корня до найденного узла.",
+        complexity="O(log n) в среднем",
+        icon="tree",
+        order_index=55,
+        default_input_data=default_input,
+        input_schema={"input_array": "array", "target": "number"},
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+# ============================================================
+# Обход дерева в ширину
+# ============================================================
+
+def add_tree_bfs():
+    python_code = (
+        'w = Window("main")\n'
+        't = Tree(nodes=nodes, edges=edges, root_id=start_node,\n'
+        '         layout="hierarchical")\n'
+        'w.attach(t)\n'
+        '\n'
+        'visited = [start_node]\n'
+        'queue = [start_node]\n'
+        't.highlight_node(start_node, "green")\n'
+        'wait(300)\n'
+        '\n'
+        'while len(queue) > 0:\n'
+        '    u = queue[0]\n'
+        '    queue = queue[1:]\n'
+        '    t.highlight_node(u, "orange")\n'
+        '    wait(300)\n'
+        '    for v in t.neighbors(u):\n'
+        '        if v not in visited:\n'
+        '            t.highlight_edge(u, v, "blue")\n'
+        '            visited = visited + [v]\n'
+        '            queue = queue + [v]\n'
+        '            t.highlight_node(v, "green")\n'
+        '            wait(300)\n'
+        '    t.unhighlight_node(u)\n'
+        '    wait(200)\n'
+    )
+    default_input = {
+        "nodes": [
+            {"label": "1"},
+            {"label": "2"},
+            {"label": "3"},
+            {"label": "4"},
+            {"label": "5"},
+        ],
+        "edges": [
+            {"from": 0, "to": 1},
+            {"from": 0, "to": 2},
+            {"from": 1, "to": 3},
+            {"from": 1, "to": 4},
+        ],
+        "start_node": 0,
+    }
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="tree-bfs",
+        name="Обход дерева в ширину",
+        display_name="Обход дерева в ширину (BFS по дереву)",
+        category_id="graph",
+        description_short="Обход дерева по уровням",
+        description_full="BFS по иерархическому дереву: волна от корня вниз. Использует neighbors, который для дерева возвращает только детей.",
+        complexity="O(V)",
+        icon="tree",
+        order_index=60,
+        default_input_data=default_input,
+        input_schema={
+            "nodes": "graph_nodes",
+            "edges": "graph_edges",
+            "start_node": "number",
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )

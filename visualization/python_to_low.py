@@ -6,6 +6,7 @@ from typing import List, Dict, Any
 STRUCTURE_CLASSES = {
     'Vector': 'vector',
     'Graph': 'graph',
+    'Tree': 'tree',
 }
 
 # Класс окна.
@@ -23,6 +24,9 @@ STRUCTURE_METHODS = {
     'highlight_node',
     'unhighlight_node',
     'set_node_label',
+    'add_child',
+    'remove_leaf',
+    'highlight_path',
 }
 
 # Методы окна: имя метода → компонент.
@@ -135,6 +139,13 @@ class PythonToLowTransformer(ast.NodeVisitor):
         if else_commands:
             cmd["else"] = else_commands
         self.current_block.append(cmd)
+
+    # ---------- break / continue ----------
+    def visit_Break(self, node):
+        self.current_block.append({"component": "break_loop"})
+
+    def visit_Continue(self, node):
+        self.current_block.append({"component": "continue_loop"})
 
     # ---------- Присваивание ----------
     def visit_Assign(self, node):
@@ -254,6 +265,15 @@ class PythonToLowTransformer(ast.NodeVisitor):
                 'nodes': self._expr_to_data(kwargs.get('nodes')) or [],
                 'edges': self._expr_to_data(kwargs.get('edges')) or [],
                 'directed': self._expr_to_data(kwargs.get('directed')) if 'directed' in kwargs else False,
+            }
+
+        if type_name == 'tree':
+            return {
+                'nodes': self._expr_to_data(kwargs.get('nodes')) or [],
+                'edges': self._expr_to_data(kwargs.get('edges')) or [],
+                'directed': True,
+                'root_id': self._expr_to_data(kwargs.get('root_id')),
+                'layout': 'hierarchical',
             }
 
         raise SyntaxError(f"Не знаю, как извлечь данные для типа '{type_name}'")
@@ -517,6 +537,24 @@ class PythonToLowTransformer(ast.NodeVisitor):
         if method_name == 'set_node_label':
             params['node_id'] = self._method_arg(args[0]) if args else None
             params['label'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        if method_name == 'add_child':
+            params['parent_id'] = self._method_arg(args[0]) if args else None
+            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
+            params['label'] = (self._method_arg(args[2]) if len(args) > 2
+                               else self._method_arg(kwargs.get('label')))
+            return params
+
+        if method_name == 'remove_leaf':
+            params['node_id'] = self._method_arg(args[0]) if args else None
+            return params
+
+        if method_name == 'highlight_path':
+            params['from_id'] = self._method_arg(args[0]) if args else None
+            params['to_id'] = self._method_arg(args[1]) if len(args) > 1 else None
+            params['color'] = (self._method_arg(args[2]) if len(args) > 2
+                               else self._method_arg(kwargs.get('color')))
             return params
 
         return params

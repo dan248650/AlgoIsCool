@@ -15,7 +15,7 @@
   * складывает рядом снапшот.
 """
 from abc import ABC, abstractmethod
-from .layout import compute_layout
+from .layout import compute_layout, compute_tree_layout
 
 
 class Structure(ABC):
@@ -380,11 +380,339 @@ class GraphStructure(Structure):
         }
 
 
+class TreeStructure(GraphStructure):
+    type_name = 'tree'
+
+    def __init__(self, data):
+        super().__init__(data)
+        # Узлы: id (уникальный), label (для отображения), value (для сравнений).
+        # Если value не задан — берём id; если id не задан — порядковый индекс.
+        self.nodes = []
+        for i, n in enumerate(data.get('nodes', [])):
+            nid = n.get('id', i)
+            value = n.get('value', nid)
+            self.nodes.append({
+                'id': nid,
+                'label': n.get('label', str(value)),
+                'value': value,
+            })
+
+        # Счётчик для авто-генерации id в add_child.
+        numeric_ids = [n['id'] for n in self.nodes if isinstance(n['id'], int)]
+        self._next_id = (max(numeric_ids) + 1) if numeric_ids else 1
+
+        # Корень: явный или центр графа.
+        explicit_root = data.get('root_id')
+        if explicit_root is not None:
+            self.root_id = explicit_root
+        else:
+            self.root_id = self._find_center()
+
+        # Для дерева directed всегда True: рёбра — от родителя к ребёнку.
+        # (Если пришли неориентированные рёбра, интерпретируем их
+        # как «родитель ↔ ребёнок» и считаем от корня.)
+        self.directed = True
+        self._build_parent_map()
+
+    # ---------- Поиск корня ----------
+
+    def _find_center(self):
+        """Центр графа: узлы с минимальным эксцентриситетом."""
+        if not self.nodes:
+            raise ValueError("Tree: нет узлов")
+
+        # BFS от каждого узла; для дерева это O(V^2), приемлемо.
+        adj = {n['id']: [] for n in self.nodes}
+        for e in self.edges:
+            adj[e['from']].append(e['to'])
+            adj[e['to']].append(e['from'])
+
+        def eccentricity(start):
+            dist = {start: 0}
+            queue = [start]
+            while queue:
+                u = queue.pop(0)
+                for v in adj[u]:
+                    if v not in dist:
+                        dist[v] = dist[u] + 1
+                        queue.append(v)
+            return max(dist.values())
+
+        ecc = {n['id']: eccentricity(n['id']) for n in self.nodes}
+        min_ecc = min(ecc.values())
+        candidates = [nid for nid, e in ecc.items() if e == min_ecc]
+
+        # Если кандидатов несколько (чётный диаметр), берём первый
+        # по порядку в nodes — для стабильности.
+        order = {n['id']: i for i, n in enumerate(self.nodes)}
+        candidates.sort(key=lambda nid: order[nid])
+        return candidates[0]
+
+    def _build_parent_map(self):
+        """parent_of[child] = parent. Для корня — None.
+        После обхода нормализуем self.edges: каждое ребро становится
+        parent → child, независимо от того, как оно было в input."""
+        self.parent_of = {self.root_id: None}
+        children_of = {self.root_id: []}
+        queue = [self.root_id]
+        visited = {self.root_id}
+
+        # adjacency (неориентированная) для обхода
+        adj = {n['id']: [] for n in self.nodes}
+        for e in self.edges:
+            adj[e['from']].append(e['to'])
+            adj[e['to']].append(e['from'])
+
+        while queue:
+            u = queue.pop(0)
+            for v in adj[u]:
+                if v not in visited:
+                    visited.add(v)
+                    self.parent_of[v] = u
+                    children_of.setdefault(u, []).append(v)
+                    children_of.setdefault(v, [])
+                    queue.append(v)
+
+        self.children_of_map = children_of
+
+        # Сохраняем label рёбер (если были) по обоим направлениям,
+        # чтобы при нормализации не потерять.
+        label_map = {}
+        for e in self.edges:
+            if e.get('label') is not None:
+                label_map[(e['from'], e['to'])] = e['label']
+                label_map[(e['to'], e['from'])] = e['label']
+
+        # Перестраиваем self.edges: каждое ребро = parent → child.
+        new_edges = []
+        for nid, parent in self.parent_of.items():
+            if parent is None:
+                continue
+            edge = {'from': parent, 'to': nid}
+            label = label_map.get((parent, nid))
+            if label is not None:
+                edge['label'] = label
+            new_edges.append(edge)
+        self.edges = new_edges
+
+    def handle(self, component, params):
+        if component == 'add_child':
+            return self.add_child(
+                params['parent_id'],
+                params['value'],
+                params.get('label'),
+            )
+        if component == 'remove_leaf':
+            return self.remove_leaf(params['node_id'])
+        if component == 'highlight_path':
+            return self.highlight_path(
+                params['from_id'],
+                params['to_id'],
+                params.get('color'),
+            )
+        # Всё остальное — из GraphStructure (create_graph, highlight_node, ...)
+        return super().handle(component, params)
+
+    # ---------- neighbors ----------
+
+    def neighbors(self, node_id):
+        nid = self._to_index(node_id)
+        children = list(self.children_of_map.get(nid, []))
+        children.sort(key=lambda c: (self._value_of_id(c), c))
+        return children
+
+    # ---------- Раскладка ----------
+
+    def ensure_layout(self):
+        if self._layout_version >= self._version:
+            return
+
+        # Для дерева иерархическая раскладка.
+        # Передаём prev_layout для потенциального warm start.
+        self._layout = compute_tree_layout(
+            self.nodes, self.edges, root_id=self.root_id,
+            scale=self._layout_scale,
+            prev_layout=self._layout,
+        )
+        self._layout_version = self._version
+
+    def children_of(self, node_id):
+        """
+        Список id детей, отсортированный по значению (value) детей.
+        Для BST это даёт порядок [левый, правый]:
+        children[0] — меньший ребёнок, children[-1] — больший.
+        """
+        children = list(self.children_of_map.get(self._to_index(node_id), []))
+        children.sort(key=lambda c: (self._value_of_id(c), c))
+        return children
+
+    def _value_of_id(self, node_id):
+        """Внутренний: значение узла по id (для сортировки и сравнений)."""
+        nid = self._to_index(node_id)
+        for n in self.nodes:
+            if n['id'] == nid:
+                return n.get('value', nid)
+        raise ValueError(f"Tree: node {node_id} not found")
+
+    def value_of(self, node_id):
+        """Публичный: значение узла по id. Используется в DSL для BST."""
+        return self._value_of_id(node_id)
+
+    # ---------- Динамика ----------
+
+    def add_child(self, parent_id, value, label=None):
+        """
+        Добавить ребёнка к parent_id. child_id генерируется автоматически,
+        value сохраняется отдельно (может повторяться в BST-дублях).
+        Возвращает сырые команды.
+        """
+        parent_id = self._to_index(parent_id)
+
+        new_id = self._next_id
+        self._next_id += 1
+
+        self.nodes.append({
+            'id': new_id,
+            'label': label if label is not None else str(value),
+            'value': value,
+        })
+        self.edges.append({'from': parent_id, 'to': new_id})
+        self.children_of_map.setdefault(parent_id, []).append(new_id)
+        self.children_of_map.setdefault(new_id, [])
+        self.parent_of[new_id] = parent_id
+
+        self._bump_version()
+
+        return [self._tag({
+            'component': 'replace_graph',
+            'params': self._build_graph_params(),
+        })]
+
+    def remove_leaf(self, node_id):
+        """Удалить лист. Если не лист — ошибка."""
+        node_id = self._to_index(node_id)
+        if self.children_of_map.get(node_id):
+            raise ValueError(f"Node {node_id} is not a leaf")
+        if node_id == self.root_id:
+            raise ValueError("Cannot remove root")
+
+        parent = self.parent_of.get(node_id)
+        if parent is not None:
+            self.children_of_map[parent].remove(node_id)
+        self.parent_of.pop(node_id, None)
+        self.children_of_map.pop(node_id, None)
+        self.nodes = [n for n in self.nodes if n['id'] != node_id]
+        self.edges = [e for e in self.edges
+                      if e['from'] != node_id and e['to'] != node_id]
+
+        self._bump_version()
+
+        return [self._tag({
+            'component': 'replace_graph',
+            'params': self._build_graph_params(),
+        })]
+
+    def highlight_path(self, from_id, to_id, color):
+        """Подсветить путь между узлами from_id и to_id (через LCA)."""
+        from_id = self._to_index(from_id)
+        to_id = self._to_index(to_id)
+        path = self._find_path(from_id, to_id)
+        raw = []
+        for node_id in path:
+            self._colors[node_id] = color
+            raw.append(self._tag({
+                'component': 'highlight_node',
+                'params': {'node_id': node_id, 'color': color},
+            }))
+        return raw
+
+    def _find_path(self, a, b):
+        path_a = self._path_from_root(a)
+        path_b = self._path_from_root(b)
+        i = 0
+        while (i < len(path_a) and i < len(path_b)
+               and path_a[i] == path_b[i]):
+            i += 1
+        # общий префикс + обратная часть A (без LCA) + часть B без LCA
+        return path_a[:i] + list(reversed(path_a[i:])) + path_b[i:]
+
+    def _path_from_root(self, node_id):
+        path = []
+        current = node_id
+        while current is not None:
+            path.append(current)
+            current = self.parent_of.get(current)
+        return list(reversed(path))
+
+    # ---------- Снапшот ----------
+
+    def build_snapshot_dict(self):
+        self.ensure_layout()
+        snapshot_nodes = []
+        for node in self.nodes:
+            nid = node.get('id')
+            x, y = self._layout.get(nid, (0.0, 0.0))
+            snapshot_nodes.append({
+                'id': nid,
+                'label': node.get('label', str(nid)),
+                'value': node.get('value', nid),
+                'x': x,
+                'y': y,
+                'color': self._colors.get(nid),
+            })
+        snapshot_edges = []
+        for edge in self.edges:
+            key = self._edge_key(edge['from'], edge['to'])
+            snapshot_edges.append({
+                'from': edge['from'],
+                'to': edge['to'],
+                'color': self._edge_colors.get(key),
+                'label': edge.get('label'),
+            })
+        return {
+            'type': 'tree',
+            'directed': self.directed,
+            'nodes': snapshot_nodes,
+            'edges': snapshot_edges,
+        }
+
+    def _build_graph_params(self):
+        """Полное состояние дерева в формате create_graph params."""
+        self.ensure_layout()
+        nodes_with_coords = []
+        for node in self.nodes:
+            nid = node.get('id')
+            x, y = self._layout.get(nid, (0.0, 0.0))
+            nodes_with_coords.append({
+                'id': nid,
+                'label': node.get('label', str(nid)),
+                'value': node.get('value', nid),
+                'x': x,
+                'y': y,
+                'color': self._colors.get(nid),
+            })
+        snapshot_edges = []
+        for edge in self.edges:
+            key = self._edge_key(edge['from'], edge['to'])
+            snapshot_edges.append({
+                'from': edge['from'],
+                'to': edge['to'],
+                'color': self._edge_colors.get(key),
+                'label': edge.get('label'),
+            })
+        return {
+            'nodes': nodes_with_coords,
+            'edges': snapshot_edges,
+            'directed': self.directed,
+        }
+
+
 # ======================= ФАБРИКА =======================
 
 _STRUCTURES = {
     'vector': VectorStructure,
     'graph': GraphStructure,
+    'tree': TreeStructure,
 }
 
 
