@@ -5,7 +5,7 @@ export class BaseRenderer {
         this.settings = {
             speedFactor: 1.0,
             elementSize: 40,
-            spacing: 12,
+            spacing: 10,
             colors: {
                 comparing: '#9400D3',
                 swapping: '#FF6B6B',
@@ -18,6 +18,9 @@ export class BaseRenderer {
         this.scale = 1;
         this.offsetX = 0;
         this.offsetY = 0;
+
+        this._contentHeight = 0;
+        this.onLayoutChanged = null;
 
         this.initContainer();
 
@@ -75,6 +78,14 @@ export class BaseRenderer {
             el.style.left = `${screenX + this.offsetX}px`;
             el.style.top = `${screenY + this.offsetY}px`;
         }
+
+        // Сохраняем высоту контента для авто-подстройки окна.
+        this._contentHeight = groupHeight;
+        if (this.onLayoutChanged) this.onLayoutChanged();
+    }
+
+    getContentHeight() {
+        return this._contentHeight || 0;
     }
 
     // Общий шаблон для сценариев, меняющих геометрию контейнера:
@@ -125,6 +136,7 @@ export class BaseRenderer {
     clear() {
         this.container.innerHTML = '';
         this.elements.clear();
+        this._contentHeight = 0;
     }
 
     sleep(ms) {

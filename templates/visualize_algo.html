@@ -140,7 +140,6 @@
         let settings = {
             speed_factor: 1.0,
             element_size: 60,
-            spacing: 10
         };
 
         let inputData = {
@@ -149,7 +148,7 @@
             nodes: serverInputData.nodes || [],
             edges: serverInputData.edges || [],
             directed: serverInputData.directed !== undefined ? serverInputData.directed : false,
-            start_node: serverInputData.start_node !== undefined ? serverInputData.start_node : 0
+            start_node: serverInputData.start_node !== undefined ? serverInputData.start_node : 0,
         };
 
         // DOM элементы

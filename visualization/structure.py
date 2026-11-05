@@ -105,6 +105,16 @@ class VectorStructure(Structure):
             if component == 'unhighlight':
                 return self._unhighlight(indices)
             return self._set_opacity(indices, params['opacity'])
+        if component == 'set':
+            return self.set(params['index'], params['value'])
+        if component == 'append':
+            return self.append(params['value'])
+        if component == 'pop':
+            return self.pop()
+        if component == 'insert':
+            return self.insert(params['index'], params['value'])
+        if component == 'remove':
+            return self.remove(params['index'])
         if component == 'swap':
             return self._swap(params['i'], params['j'])
         raise ValueError(f"Unknown vector component: {component}")
@@ -141,6 +151,120 @@ class VectorStructure(Structure):
                 'element_ids': [f"elem_{i}" for i in indices],
                 'opacity': opacity,
             },
+        })]
+
+    # --- Динамика ---
+
+    def _norm_index(self, value):
+        """Нормализует индекс: отрицательные считаются с конца."""
+        i = self._to_index(value)
+        if i < 0:
+            i = len(self.array) + i
+        return i
+
+    def value_at(self, index):
+        """Значение элемента по индексу (для чтения в DSL)."""
+        i = self._norm_index(index)
+        if i < 0 or i >= len(self.array):
+            raise ValueError(f"value_at: индекс {index} вне диапазона")
+        return self.array[i]
+
+    def size(self):
+        """Количество элементов в векторе (для циклов и проверок)."""
+        return len(self.array)
+
+    def append(self, value):
+        """Добавить элемент в конец."""
+        new_index = len(self.array)
+        x = new_index * (self._base_element_size + self._spacing)
+        self.array.append(value)
+        return [self._tag({
+            'component': 'create_element',
+            'params': {
+                'id': f"elem_{new_index}",
+                'value': value,
+                'x': x,
+                'y': 50,
+            },
+        })]
+
+    def pop(self):
+        """Удалить последний элемент."""
+        if not self.array:
+            raise ValueError("pop из пустого вектора")
+        last = len(self.array) - 1
+        self.array.pop()
+        self._colors.pop(last, None)
+        self._styles.pop(last, None)
+        return [self._tag({
+            'component': 'remove_element',
+            'params': {'id': f"elem_{last}"},
+        })]
+
+    def insert(self, index, value):
+        n = len(self.array)
+        idx = self._norm_index(index)
+        if idx < 0 or idx > n:
+            raise ValueError(f"insert: индекс {index} вне диапазона")
+
+        # Сдвиг цветов/стилей вправо
+        new_colors = {}
+        for i, c in self._colors.items():
+            new_colors[i if i < idx else i + 1] = c
+        self._colors = new_colors
+        new_styles = {}
+        for i, s in self._styles.items():
+            new_styles[i if i < idx else i + 1] = s
+        self._styles = new_styles
+
+        self.array.insert(idx, value)
+
+        return [self._tag({
+            'component': 'replace_elements',
+            'params': {
+                **self.build_snapshot_dict(),
+                'animation': {'type': 'insert', 'at': idx},
+            },
+        })]
+
+    def remove(self, index):
+        n = len(self.array)
+        if n == 0:
+            raise ValueError("remove из пустого вектора")
+        idx = self._norm_index(index)
+        if idx < 0 or idx >= n:
+            raise ValueError(f"remove: индекс {index} вне диапазона")
+
+        self.array.pop(idx)
+        self._colors.pop(idx, None)
+        self._styles.pop(idx, None)
+        new_colors = {}
+        for i, c in self._colors.items():
+            new_colors[i if i < idx else i - 1] = c
+        self._colors = new_colors
+        new_styles = {}
+        for i, s in self._styles.items():
+            new_styles[i if i < idx else i - 1] = s
+        self._styles = new_styles
+
+        return [self._tag({
+            'component': 'replace_elements',
+            'params': {
+                **self.build_snapshot_dict(),
+                'animation': {'type': 'remove', 'at': idx},
+            },
+        })]
+
+    # --- Одиночное обновление ---
+
+    def set(self, index, value):
+        i = self._norm_index(index)
+        if i < 0 or i >= len(self.array):
+            raise ValueError(f"set: индекс {index} вне диапазона")
+        self.array[i] = value
+        return [self._tag({
+            'component': 'update_element',
+            'params': {'id': f"elem_{i}", 'value': value},
         })]
 
     # --- специфичное для вектора ---
@@ -267,6 +391,10 @@ class GraphStructure(Structure):
             return self._highlight_edge(self._to_index(params['from']), self._to_index(params['to']), params['color'])
         if component == 'unhighlight_edge':
             return self._unhighlight_edge(self._to_index(params['from']), self._to_index(params['to']))
+        if component == 'set_node_value':
+            return self.set_node_value(
+                params['node_id'], params['value'], params.get('label'),
+            )
         if component == 'set_node_label':
             return self._set_node_label(self._to_index(params['node_id']), params['label'])
         raise ValueError(f"Unknown graph component: {component}")
@@ -346,6 +474,22 @@ class GraphStructure(Structure):
         return [self._tag({
             'component': 'set_node_label',
             'params': {'node_id': node_id, 'label': label},
+        })]
+
+    def set_node_value(self, node_id, value, label=None):
+        nid = self._to_index(node_id)
+        for node in self.nodes:
+            if node.get('id') == nid:
+                node['value'] = value
+                node['label'] = label if label is not None else str(value)
+                break
+        return [self._tag({
+            'component': 'update_node',
+            'params': {
+                'node_id': nid,
+                'label': label if label is not None else str(value),
+                'value': value,
+            },
         })]
 
     # --- снапшот ---

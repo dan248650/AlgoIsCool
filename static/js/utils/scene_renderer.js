@@ -20,11 +20,12 @@ export class SceneRenderer {
         this.activeTab = 'all';   // 'all' | 'window:<id>'
         this.onWindowsChanged = null;
         this._notificationContainer = null;
+        this._updatingHeights = false;
 
         this.settings = {
             speedFactor: 1.0,
             elementSize: 40,
-            spacing: 12,
+            spacing: 10,
             colors: {
                 comparing: '#9400D3',
                 swapping: '#FF6B6B',
@@ -88,10 +89,12 @@ export class SceneRenderer {
 
             const r = new RendererClass(host);
             r.updateSettings(this.settings);
+            r.onLayoutChanged = () => this._updateWindowHeights();
             this.renderers.set(name, r);
             r.applySnapshot(frag);
         }
 
+        this._updateWindowHeights();
         if (this.onWindowsChanged) this.onWindowsChanged();
     }
 
@@ -211,6 +214,7 @@ export class SceneRenderer {
 
         const r = new RendererClass(host);
         r.updateSettings(this.settings);
+        r.onLayoutChanged = () => this._updateWindowHeights();
         this.renderers.set(structureName, r);
         return r;
     }
@@ -282,6 +286,7 @@ export class SceneRenderer {
             }
         }
 
+        this._updateWindowHeights();
         if (this.onWindowsChanged) this.onWindowsChanged();
     }
 
@@ -301,6 +306,7 @@ export class SceneRenderer {
 
         await this._notifyVisibilityChanged(skipAnimation);
 
+        this._updateWindowHeights();
         if (this.onWindowsChanged) this.onWindowsChanged();
     }
 
@@ -365,6 +371,7 @@ export class SceneRenderer {
         );
 
         await this._notifyVisibilityChanged(skipAnimation);
+        this._updateWindowHeights();
     }
 
     _applyActiveTabClasses() {
@@ -381,6 +388,41 @@ export class SceneRenderer {
         const activeWid = isAll ? null : this.activeTab.replace('window:', '');
         for (const [id, wr] of this.windows) {
             wr.element.classList.toggle('active-window', id === activeWid);
+        }
+    }
+
+    _updateWindowHeights() {
+        if (this._updatingHeights) return;
+        this._updatingHeights = true;
+        try {
+            const isAll = this.activeTab === 'all';
+            const toRelayout = [];
+            for (const [wid, wr] of this.windows) {
+                if (!isAll) {
+                    wr.clearContentHeight();
+                    continue;
+                }
+                let maxH = 0;
+                const renderersInWindow = [];
+                for (const [name, r] of this.renderers) {
+                    if (this.windowByStructure.get(name) === wid) {
+                        const h = r.getContentHeight ? r.getContentHeight() : 0;
+                        if (h > maxH) maxH = h;
+                        renderersInWindow.push(r);
+                    }
+                }
+                if (maxH > 0) {
+                    wr.setContentHeight(maxH);
+                    toRelayout.push(...renderersInWindow);
+                } else {
+                    wr.clearContentHeight();
+                }
+            }
+            for (const r of toRelayout) {
+                if (r.updateLayout) r.updateLayout();
+            }
+        } finally {
+            this._updatingHeights = false;
         }
     }
 

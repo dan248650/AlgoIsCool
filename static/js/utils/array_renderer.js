@@ -7,6 +7,18 @@ export class ArrayRenderer extends BaseRenderer {
             case 'create_elements':
                 await this.createElements(command.params.array, skipAnimation);
                 break;
+            case 'update_element':
+                await this.updateElement(command.params, skipAnimation);
+                break;
+            case 'create_element':
+                await this.createElement(command.params, skipAnimation);
+                break;
+            case 'remove_element':
+                await this.removeElement(command.params, skipAnimation);
+                break;
+            case 'replace_elements':
+                await this.applySnapshot(command.params, skipAnimation);
+                break;
             case 'highlight':
                 await this.highlight(command.params, skipAnimation);
                 break;
@@ -42,7 +54,19 @@ export class ArrayRenderer extends BaseRenderer {
     }
 
     // --- Применение снапшота ---
-    applySnapshot(snapshot) {
+
+    applySnapshot(snapshot, skipAnimation = false) {
+        const anim = snapshot?.animation;
+        if (skipAnimation || !anim || !anim.type) {
+            this.applySnapshotImmediate(snapshot);
+            return;
+        }
+        if (anim.type === 'insert') return this._animateInsert(snapshot, anim.at);
+        if (anim.type === 'remove') return this._animateRemove(snapshot, anim.at);
+        this.applySnapshotImmediate(snapshot);
+    }
+
+    applySnapshotImmediate(snapshot) {
         this.clear();
         if (!snapshot || !snapshot.elements) return;
         for (const elem of snapshot.elements) {
@@ -51,6 +75,164 @@ export class ArrayRenderer extends BaseRenderer {
             this.elements.set(elem.id, element);
         }
         this.updateLayout();
+    }
+
+    // --- FLIP-анимации ---
+
+    async _animateInsert(snapshot, at) {
+        const dur = 300 / this.settings.speedFactor;
+
+        // Снимаем старые визуальные позиции по индексам
+        const oldRects = new Map();
+        for (const [id, el] of this.elements) {
+            const idx = parseInt(id.split('_')[1], 10);
+            oldRects.set(idx, el.getBoundingClientRect());
+        }
+
+        // Жёстко перестраиваем — новые id и позиции
+        this.applySnapshotImmediate(snapshot);
+
+        // FLIP: смещаем каждый новый элемент обратно к старой визуальной позиции
+        const anims = [];
+        for (const [id, el] of this.elements) {
+            const newIdx = parseInt(id.split('_')[1], 10);
+            let oldIdx = null;
+            if (newIdx < at) oldIdx = newIdx;
+            else if (newIdx > at) oldIdx = newIdx - 1;
+
+            if (oldIdx !== null) {
+                const oldRect = oldRects.get(oldIdx);
+                if (oldRect) {
+                    const newRect = el.getBoundingClientRect();
+                    const dx = oldRect.left - newRect.left;
+                    const dy = oldRect.top - newRect.top;
+                    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+                        el.style.transition = 'none';
+                        el.style.transform = `translate(${dx}px, ${dy}px)`;
+                        anims.push(el);
+                    }
+                }
+            }
+        }
+        void this.container.offsetHeight;
+
+        for (const el of anims) {
+            el.style.transition = `transform ${dur}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            el.style.transform = '';
+        }
+
+        // Новый элемент — scale от 0
+        const newEl = this.elements.get(`elem_${at}`);
+        if (newEl) {
+            newEl.style.transform = 'scale(0)';
+            newEl.style.opacity = '0';
+            void newEl.offsetHeight;
+            newEl.style.transition = `transform ${dur}ms ease, opacity ${dur}ms ease`;
+            newEl.style.transform = 'scale(1)';
+            newEl.style.opacity = '1';
+        }
+
+        await this.sleep(dur);
+
+        // Сбрасываем transition у ВСЕХ элементов, а не только у двигавшихся:
+        // элементы до точки вставки не в anims, но у них остался
+        // 'none' из _createDomElement. Без сброса они не будут
+        // анимироваться при следующей операции.
+        for (const el of this.elements.values()) {
+            el.style.transition = '';
+        }
+        if (newEl) {
+            newEl.style.transform = '';
+            newEl.style.opacity = '';
+        }
+    }
+
+    async _animateRemove(snapshot, at) {
+        const dur = 300 / this.settings.speedFactor;
+
+        // Снимаем визуальные позиции до rebuild
+        const oldRects = new Map();
+        for (const [id, el] of this.elements) {
+            const idx = parseInt(id.split('_')[1], 10);
+            oldRects.set(idx, el.getBoundingClientRect());
+        }
+
+        // Клонируем удаляемый элемент — чтобы он плавно погас, пока
+        // остальные едут на новое место. Клон на body, чтобы пережил
+        // очистку контейнера в applySnapshotImmediate.
+        const removedEl = this.elements.get(`elem_${at}`);
+        let clone = null;
+        if (removedEl) {
+            const rect = removedEl.getBoundingClientRect();
+            clone = removedEl.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.left = `${rect.left}px`;
+            clone.style.top = `${rect.top}px`;
+            clone.style.width = `${rect.width}px`;
+            clone.style.height = `${rect.height}px`;
+            clone.style.pointerEvents = 'none';
+            clone.style.zIndex = '1000';
+            clone.style.transition = `opacity ${dur}ms ease, transform ${dur}ms ease`;
+            document.body.appendChild(clone);
+        }
+
+        // Жёсткий rebuild
+        this.applySnapshotImmediate(snapshot);
+
+        // FLIP для оставшихся
+        const anims = [];
+        for (const [id, el] of this.elements) {
+            const newIdx = parseInt(id.split('_')[1], 10);
+            const oldIdx = newIdx >= at ? newIdx + 1 : newIdx;
+            const oldRect = oldRects.get(oldIdx);
+            if (oldRect) {
+                const newRect = el.getBoundingClientRect();
+                const dx = oldRect.left - newRect.left;
+                const dy = oldRect.top - newRect.top;
+                if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+                    el.style.transition = 'none';
+                    el.style.transform = `translate(${dx}px, ${dy}px)`;
+                    anims.push(el);
+                }
+            }
+        }
+        void this.container.offsetHeight;
+
+        for (const el of anims) {
+            el.style.transition = `transform ${dur}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            el.style.transform = '';
+        }
+
+        if (clone) {
+            void clone.offsetHeight;
+            clone.style.opacity = '0';
+            clone.style.transform = 'scale(0.6)';
+        }
+
+        await this.sleep(dur);
+
+        // То же: сбрасываем transition у всех, включая элементы
+        // до точки удаления, которые не попали в anims.
+        for (const el of this.elements.values()) {
+            el.style.transition = '';
+        }
+        if (clone) clone.remove();
+    }
+
+    async updateElement(params, skipAnimation = false) {
+        const { id, value } = params;
+        const el = this.elements.get(id);
+        if (!el) return;
+        const valueDiv = el.querySelector('.value');
+        if (!valueDiv) return;
+        valueDiv.textContent = value;
+        if (!skipAnimation) {
+            valueDiv.style.transition = 'background 0.3s ease';
+            valueDiv.style.background = 'rgba(255, 255, 255, 0.6)';
+            await this.sleep(300 / this.settings.speedFactor);
+            valueDiv.style.background = '';
+            valueDiv.style.transition = '';
+        }
     }
 
     _createDomElement(elemData, baseX, baseY) {
@@ -128,6 +310,59 @@ export class ArrayRenderer extends BaseRenderer {
         await this._revealSequentially(created);
     }
 
+    async createElement(params, skipAnimation = false) {
+        const { id, value, x, y } = params;
+        const el = this._createDomElement({ id, value, color: null }, x, y);
+        this.container.appendChild(el);
+        this.elements.set(id, el);
+
+        if (skipAnimation) {
+            this.updateLayout();
+            el.style.transition = '';
+            return;
+        }
+
+        // Мгновенно поставить в масштаб 0 и прозрачность 0 — до применения layout.
+        el.style.transform = 'scale(0)';
+        el.style.opacity = '0';
+        this.updateLayout();
+        void this.container.offsetHeight;  // commit начального состояния
+
+        el.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+        el.style.transform = 'scale(1)';
+        el.style.opacity = '1';
+        await this.sleep(300 / this.settings.speedFactor);
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.opacity = '';
+    }
+
+    async removeElement(params, skipAnimation = false) {
+        const { id } = params;
+        const el = this.elements.get(id);
+        if (!el) return;
+
+        if (skipAnimation) {
+            el.remove();
+            this.elements.delete(id);
+            this.updateLayout();
+            return;
+        }
+
+        const dur = 300 / this.settings.speedFactor;
+
+        // Фейд удаляемого элемента — параллельно со сдвигом остальных.
+        el.style.transition = `opacity ${dur}ms ease, transform ${dur}ms ease`;
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.6)';
+
+        this.elements.delete(id);
+        this.updateLayout();
+
+        await this.sleep(dur);
+        el.remove();
+    }
+
     _revealAllInstantly(elements) {
         for (const el of elements) {
             el.style.transition = 'none';
@@ -136,6 +371,7 @@ export class ArrayRenderer extends BaseRenderer {
         void this.container.offsetHeight;   // применить без анимации
         for (const el of elements) {
             el.style.transition = '';
+            el.style.transform = '';
         }
     }
 
@@ -156,6 +392,13 @@ export class ArrayRenderer extends BaseRenderer {
         for (let i = 0; i < n; i++) {
             elements[i].style.transform = 'scale(1)';
             await this.sleep(step);
+        }
+
+        // После раскрытия даём обычный transition из CSS — чтобы future
+        // shift/updateLayout могли анимироваться, если понадобится.
+        for (const el of elements) {
+            el.style.transition = '';
+            el.style.transform = '';
         }
     }
 
@@ -334,12 +577,17 @@ export class ArrayRenderer extends BaseRenderer {
         for (const id of element_ids) {
             const element = this.elements.get(id);
             if (!element) continue;
-            element.style.transition = `box-shadow ${actualDuration}ms ease`;
+            element.style.transition = `box-shadow ${actualDuration}ms ease, opacity ${actualDuration}ms ease`;
             element.style.opacity = opacity;
             element.style.boxShadow = `0 0 12px 4px ${color}, 0 0 24px 8px ${color}`;
         }
         if (!skipAnimation) {
             await this.sleep(actualDuration);
+        }
+        for (const id of element_ids) {
+            const element = this.elements.get(id);
+            if (!element) continue;
+            element.style.transition = '';
         }
     }
 
@@ -349,13 +597,18 @@ export class ArrayRenderer extends BaseRenderer {
         for (const id of element_ids) {
             const element = this.elements.get(id);
             if (!element) continue;
-            element.style.transition = `box-shadow ${actualDuration}ms ease`;
+            element.style.transition = `box-shadow ${actualDuration}ms ease, opacity ${actualDuration}ms ease`;
             const defaultBs = element.dataset.defaultBs || '';
             element.style.opacity = 1;
             element.style.boxShadow = defaultBs;
         }
         if (!skipAnimation) {
             await this.sleep(actualDuration);
+        }
+        for (const id of element_ids) {
+            const element = this.elements.get(id);
+            if (!element) continue;
+            element.style.transition = '';
         }
     }
 
@@ -370,6 +623,11 @@ export class ArrayRenderer extends BaseRenderer {
         }
         if (!skipAnimation) {
             await this.sleep(actualDuration);
+        }
+        for (const id of element_ids) {
+            const element = this.elements.get(id);
+            if (!element) continue;
+            element.style.transition = '';
         }
     }
 }

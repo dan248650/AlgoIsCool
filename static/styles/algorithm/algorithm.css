@@ -580,7 +580,18 @@ body::after {
     pointer-events: auto;
 }
 
-/* === Режим "одно окно": визуально как legacy-визуализация === */
+/* === Режим "Все окна" === */
+.scene-container.mode-all .scene-window {
+    display: flex;
+    flex-direction: column;
+}
+
+.scene-container.mode-all .scene-window-content {
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+/* === Режим "одно окно" === */
 .scene-container.mode-single {
     display: flex;
     flex-direction: column;

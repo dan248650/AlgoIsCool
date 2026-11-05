@@ -25,6 +25,8 @@ class BaseInterpreter:
             'increment': lambda x: x + 1,
             'decrement': lambda x: x - 1,
             'swap': self._swap_array_elements,
+            'min': lambda *args: min(*args),
+            'max': lambda *args: max(*args),
         }
         self._base_element_size = 40
         self._command_counter = 0

@@ -1,6 +1,6 @@
 import ast
 from _ast import stmt
-from typing import List, Dict, Any
+from typing import List, Dict
 
 # Классы-конструкторы структур. Имя класса → внутренний тип.
 STRUCTURE_CLASSES = {
@@ -23,10 +23,16 @@ STRUCTURE_METHODS = {
     'unhighlight_edge',
     'highlight_node',
     'unhighlight_node',
+    'set_node_value',
     'set_node_label',
     'add_child',
     'remove_leaf',
     'highlight_path',
+    'set',
+    'append',
+    'pop',
+    'insert',
+    'remove',
 }
 
 # Методы окна: имя метода → компонент.
@@ -534,6 +540,13 @@ class PythonToLowTransformer(ast.NodeVisitor):
                                    else self._method_arg(kwargs.get('color')))
             return params
 
+        if method_name == 'set_node_value':
+            params['node_id'] = self._method_arg(args[0]) if args else None
+            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
+            params['label'] = (self._method_arg(args[2]) if len(args) > 2
+                               else self._method_arg(kwargs.get('label')))
+            return params
+
         if method_name == 'set_node_label':
             params['node_id'] = self._method_arg(args[0]) if args else None
             params['label'] = self._method_arg(args[1]) if len(args) > 1 else None
@@ -555,6 +568,27 @@ class PythonToLowTransformer(ast.NodeVisitor):
             params['to_id'] = self._method_arg(args[1]) if len(args) > 1 else None
             params['color'] = (self._method_arg(args[2]) if len(args) > 2
                                else self._method_arg(kwargs.get('color')))
+            return params
+
+        if method_name == 'set':
+            params['index'] = self._method_arg(args[0]) if args else None
+            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        if method_name == 'append':
+            params['value'] = self._method_arg(args[0]) if args else None
+            return params
+
+        if method_name == 'pop':
+            return params
+
+        if method_name == 'insert':
+            params['index'] = self._method_arg(args[0]) if args else None
+            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        if method_name == 'remove':
+            params['index'] = self._method_arg(args[0]) if args else None
             return params
 
         return params

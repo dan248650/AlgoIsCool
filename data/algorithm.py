@@ -631,3 +631,337 @@ def add_tree_bfs():
         definition_python=python_code,
         definition_mode='python',
     )
+
+
+def add_prefix_sums():
+    python_code = (
+        'w1 = Window("input")\n'
+        'w2 = Window("prefix")\n'
+        'arr = Vector(input_array)\n'
+        'pre = Vector([])\n'
+        'w1.attach(arr)\n'
+        'w2.attach(pre)\n'
+        'wait(500)\n'
+        '\n'
+        'total = 0\n'
+        'for i in range(len(input_array)):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    wait(400)\n'
+        '    total = total + input_array[i]\n'
+        '    pre.append(total)\n'
+        '    pre.highlight(i, "green")\n'
+        '    arr.unhighlight(i)\n'
+        '    wait(300)\n'
+        '    pre.unhighlight(i)\n'
+    )
+    default_input = {"input_array": [1, 3, 2, 5, 4, 6, 2]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="prefix-sums",
+        name="Prefix sums",
+        display_name="Префиксные суммы",
+        category_id="search",
+        description_short="Растущий второй массив с накопленными суммами",
+        description_full="Слева — входной массив, справа — растущий массив префиксных сумм. Каждая новая ячейка = сумма всех элементов от начала до текущего.",
+        complexity="O(n)",
+        icon="prefix",
+        order_index=70,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {
+                "type": "array",
+                "constraints": {"min_length": 3, "max_length": 12},
+            },
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_suffix_sums():
+    python_code = (
+        'w1 = Window("input")\n'
+        'w2 = Window("suffix")\n'
+        'arr = Vector(input_array)\n'
+        'suf = Vector([])\n'
+        'w1.attach(arr)\n'
+        'w2.attach(suf)\n'
+        'wait(500)\n'
+        '\n'
+        'total = 0\n'
+        'n = len(input_array)\n'
+        'for k in range(n):\n'
+        '    i = n - 1 - k\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    wait(400)\n'
+        '    total = total + input_array[i]\n'
+        '    suf.insert(0, total)\n'
+        '    suf.highlight(0, "cyan")\n'
+        '    arr.unhighlight(i)\n'
+        '    wait(300)\n'
+        '    suf.unhighlight(0)\n'
+    )
+    default_input = {"input_array": [1, 3, 2, 5, 4, 6, 2]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="suffix-sums",
+        name="Suffix sums",
+        display_name="Суффиксные суммы",
+        category_id="search",
+        description_short="Растущий второй массив с суффиксными суммами",
+        description_full="Слева — входной массив, справа — растущий массив суффиксных сумм. Обрабатываем справа налево; каждая новая ячейка = сумма всех элементов от текущего до конца.",
+        complexity="O(n)",
+        icon="suffix",
+        order_index=75,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {
+                "type": "array",
+                "constraints": {"min_length": 3, "max_length": 12},
+            },
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_nearest_smaller_left():
+    python_code = (
+        'w1 = Window("input")\n'
+        'w2 = Window("stack")\n'
+        'w3 = Window("result")\n'
+        'arr = Vector(input_array)\n'
+        'st = Vector([])\n'
+        'res = Vector([])\n'
+        'w1.attach(arr)\n'
+        'w2.attach(st)\n'
+        'w3.attach(res)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(len(input_array)):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    wait(400)\n'
+        '    while st.size() > 0:\n'
+        '        top = st.value_at(st.size() - 1)\n'
+        '        if input_array[top] >= input_array[i]:\n'
+        '            st.pop()\n'
+        '            wait(200)\n'
+        '            continue\n'
+        '        break\n'
+        '    if st.size() == 0:\n'
+        '        res.append(-1)\n'
+        '        res.highlight(i, "red")\n'
+        '    else:\n'
+        '        top = st.value_at(st.size() - 1)\n'
+        '        res.append(top)\n'
+        '        res.highlight(i, "green")\n'
+        '    st.append(i)\n'
+        '    arr.unhighlight(i)\n'
+        '    wait(300)\n'
+        '    res.unhighlight(i)\n'
+    )
+    default_input = {"input_array": [3, 1, 4, 1, 5, 9, 2, 6]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="nearest-smaller-left",
+        name="Nearest smaller to left",
+        display_name="Ближайший меньший слева",
+        category_id="search",
+        description_short="Монотонный стек: для каждого элемента найти ближайший меньший слева",
+        description_full="Для каждого arr[i] ищем индекс ближайшего j < i с arr[j] < arr[i] (или -1). Стек (второе окно) хранит индексы возрастающих элементов; перед добавлением нового чистим от элементов >= arr[i]. Результат (третье окно) — ответы по каждому индексу.",
+        complexity="O(n)",
+        icon="stack",
+        order_index=80,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {
+                "type": "array",
+                "constraints": {"min_length": 3, "max_length": 12},
+            },
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_boyer_moore_majority():
+    python_code = (
+        'w1 = Window("array")\n'
+        'w2 = Window("state")\n'
+        'arr = Vector(input_array)\n'
+        'state = Vector([0, 0])\n'
+        'w1.attach(arr)\n'
+        'w2.attach(state)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(len(input_array)):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    wait(300)\n'
+        '    cand = state.value_at(0)\n'
+        '    cnt = state.value_at(1)\n'
+        '    if cnt == 0:\n'
+        '        state.set(0, input_array[i])\n'
+        '        state.set(1, 1)\n'
+        '    elif input_array[i] == cand:\n'
+        '        state.set(1, cnt + 1)\n'
+        '    else:\n'
+        '        state.set(1, cnt - 1)\n'
+        '    arr.unhighlight(i)\n'
+        '    wait(200)\n'
+        '\n'
+        'cand = state.value_at(0)\n'
+        'final_count = 0\n'
+        'for i in range(len(input_array)):\n'
+        '    if input_array[i] == cand:\n'
+        '        final_count = final_count + 1\n'
+        '\n'
+        'if final_count * 2 > len(input_array):\n'
+        '    for i in range(len(input_array)):\n'
+        '        if input_array[i] == cand:\n'
+        '            arr.highlight(i, "green")\n'
+        'else:\n'
+        '    for i in range(len(input_array)):\n'
+        '        if input_array[i] == cand:\n'
+        '            arr.highlight(i, "red")\n'
+        'wait(1000)\n'
+    )
+    default_input = {"input_array": [2, 2, 1, 1, 1, 2, 2]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="boyer-moore-majority",
+        name="Boyer-Moore majority vote",
+        display_name="Поиск мажоритарного элемента (Boyer-Moore)",
+        category_id="search",
+        description_short="Кандидат + счётчик: большинство найдено за один проход",
+        description_full="Классический трюк: держим кандидата и счётчик. При cnt = 0 меняем кандидата; при совпадении "
+                         "cnt+1, иначе cnt-1. В конце проверяем, действительно ли кандидат — мажоритарный ("
+                         "встречается больше n/2 раз). Второе окно показывает текущего кандидата и счётчик.",
+        complexity="O(n)",
+        icon="vote",
+        order_index=85,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {
+                "type": "array",
+                "constraints": {"min_length": 3, "max_length": 13},
+            },
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_trapping_rain_water():
+    python_code = (
+        'w1 = Window("input")\n'
+        'w2 = Window("water")\n'
+        'w3 = Window("left_max")\n'
+        'w4 = Window("right_max")\n'
+        'arr = Vector(input_array)\n'
+        'lmax = Vector([])\n'
+        'rmax = Vector([])\n'
+        'wat = Vector([])\n'
+        'w1.attach(arr)\n'
+        'w2.attach(wat)\n'
+        'w3.attach(lmax)\n'
+        'w4.attach(rmax)\n'
+        'wait(500)\n'
+        '\n'
+        'n = len(input_array)\n'
+        '\n'
+        '# Проход 1: left_max[i] = max(input_array[0..i])\n'
+        'cur = 0\n'
+        'for i in range(n):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    wait(300)\n'
+        '    if input_array[i] > cur:\n'
+        '        cur = input_array[i]\n'
+        '    lmax.append(cur)\n'
+        '    lmax.highlight(i, "cyan")\n'
+        '    arr.unhighlight(i)\n'
+        '    wait(200)\n'
+        '    lmax.unhighlight(i)\n'
+        '\n'
+        '# Проход 2: right_max[i] = max(input_array[i..n-1])\n'
+        '# Идём справа налево; каждый новый элемент вставляем в начало.\n'
+        'cur = 0\n'
+        'for k in range(n):\n'
+        '    i = n - 1 - k\n'
+        '    arr.highlight(i, "orange")\n'
+        '    wait(300)\n'
+        '    if input_array[i] > cur:\n'
+        '        cur = input_array[i]\n'
+        '    rmax.insert(0, cur)\n'
+        '    rmax.highlight(0, "cyan")\n'
+        '    arr.unhighlight(i)\n'
+        '    wait(200)\n'
+        '    rmax.unhighlight(0)\n'
+        '\n'
+        '# Проход 3: water[i] = min(left_max[i], right_max[i]) - input_array[i]\n'
+        'total = 0\n'
+        'for i in range(n):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    wait(300)\n'
+        '    lv = lmax.value_at(i)\n'
+        '    rv = rmax.value_at(i)\n'
+        '    if lv < rv:\n'
+        '        m = lv\n'
+        '    else:\n'
+        '        m = rv\n'
+        '    w_i = m - input_array[i]\n'
+        '    if w_i < 0:\n'
+        '        w_i = 0\n'
+        '    total = total + w_i\n'
+        '    wat.append(w_i)\n'
+        '    if w_i > 0:\n'
+        '        arr.highlight(i, "cyan")\n'
+        '    wat.highlight(i, "green")\n'
+        '    wait(300)\n'
+        '    wat.unhighlight(i)\n'
+        '    if w_i == 0:\n'
+        '        arr.unhighlight(i)\n'
+        '\n'
+        'wait(1000)\n'
+    )
+    default_input = {"input_array": [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="trapping-rain-water",
+        name="Trapping rain water",
+        display_name="Сбор дождевой воды",
+        category_id="search",
+        description_short="Три прохода: left_max, right_max, water",
+        description_full="Проход 1: для каждого i считаем max слева. Проход 2: для каждого i считаем max справа. Проход 3: water[i] = min(left_max[i], right_max[i]) - height[i].",
+        complexity="O(n)",
+        icon="water",
+        order_index=90,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {
+                "type": "array",
+                "constraints": {"min_length": 3, "max_length": 12, "min_value": 0},
+            },
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )

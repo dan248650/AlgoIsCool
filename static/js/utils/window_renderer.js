@@ -3,6 +3,7 @@ export class WindowRenderer {
         this.windowId = windowId;
         this.title = title || windowId;
         this.visible = true;
+        this._contentHeight = null;
 
         this.element = document.createElement('div');
         this.element.className = 'scene-window';
@@ -34,5 +35,22 @@ export class WindowRenderer {
 
     remove() {
         this.element.remove();
+    }
+
+    setContentHeight(contentHeight) {
+        const style = getComputedStyle(this.content);
+        const padTop = parseFloat(style.paddingTop) || 0;
+        const padBottom = parseFloat(style.paddingBottom) || 0;
+        const total = Math.max(80, Math.ceil(contentHeight + padTop + padBottom));
+
+        if (this._contentHeight === total) return;
+        this._contentHeight = total;
+        this.content.style.height = total + 'px';
+    }
+
+    clearContentHeight() {
+        if (this._contentHeight === null) return;
+        this._contentHeight = null;
+        this.content.style.height = '';
     }
 }

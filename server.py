@@ -10,6 +10,9 @@ from data.db import db
 from data.algorithm import (Algorithm, add_linear_search, add_bubble_sort,
                             add_bfs, add_dfs, add_kadane,
                             add_bst_build, add_bst_search, add_tree_bfs,
+                            add_prefix_sums, add_suffix_sums,
+                            add_nearest_smaller_left, add_boyer_moore_majority,
+                            add_trapping_rain_water,
                             )
 from data.category import init_categories
 
@@ -88,6 +91,11 @@ def init_algorithms():
     update_or_create(add_bst_build)
     update_or_create(add_bst_search)
     update_or_create(add_tree_bfs)
+    update_or_create(add_prefix_sums)
+    update_or_create(add_suffix_sums)
+    update_or_create(add_nearest_smaller_left)
+    update_or_create(add_boyer_moore_majority)
+    update_or_create(add_trapping_rain_water)
     db.session.commit()
 
 
