@@ -45,11 +45,11 @@ export class ArrayRenderer extends BaseRenderer {
         for (const element of this.elements.values()) {
             element.style.width = `${this.settings.elementSize}px`;
             element.style.height = `${this.settings.elementSize}px`;
-            element.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
+            element.style.fontSize = `${Math.max(8, this.settings.elementSize / 3)}px`;
             const valueDiv = element.querySelector('.value');
-            if (valueDiv) valueDiv.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
+            if (valueDiv) valueDiv.style.fontSize = `${Math.max(8, this.settings.elementSize / 3)}px`;
             const indexDiv = element.querySelector('.index');
-            if (indexDiv) indexDiv.style.fontSize = `${Math.max(10, this.settings.elementSize / 4)}px`;
+            if (indexDiv) indexDiv.style.fontSize = `${Math.max(6, this.settings.elementSize / 4)}px`;
         }
     }
 
@@ -117,7 +117,7 @@ export class ArrayRenderer extends BaseRenderer {
         void this.container.offsetHeight;
 
         for (const el of anims) {
-            el.style.transition = `transform ${dur}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            this._setTransition(el, `transform ${dur}ms cubic-bezier(0.4, 0, 0.2, 1)`);
             el.style.transform = '';
         }
 
@@ -127,7 +127,7 @@ export class ArrayRenderer extends BaseRenderer {
             newEl.style.transform = 'scale(0)';
             newEl.style.opacity = '0';
             void newEl.offsetHeight;
-            newEl.style.transition = `transform ${dur}ms ease, opacity ${dur}ms ease`;
+            this._setTransition(newEl, `transform ${dur}ms ease, opacity ${dur}ms ease`);
             newEl.style.transform = 'scale(1)';
             newEl.style.opacity = '1';
         }
@@ -172,7 +172,7 @@ export class ArrayRenderer extends BaseRenderer {
             clone.style.height = `${rect.height}px`;
             clone.style.pointerEvents = 'none';
             clone.style.zIndex = '1000';
-            clone.style.transition = `opacity ${dur}ms ease, transform ${dur}ms ease`;
+            this._setTransition(clone, `opacity ${dur}ms ease, transform ${dur}ms ease`);
             document.body.appendChild(clone);
         }
 
@@ -199,7 +199,7 @@ export class ArrayRenderer extends BaseRenderer {
         void this.container.offsetHeight;
 
         for (const el of anims) {
-            el.style.transition = `transform ${dur}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            this._setTransition(el, `transform ${dur}ms cubic-bezier(0.4, 0, 0.2, 1)`);
             el.style.transform = '';
         }
 
@@ -248,7 +248,7 @@ export class ArrayRenderer extends BaseRenderer {
         element.style.flexDirection = 'column';
         element.style.alignItems = 'center';
         element.style.justifyContent = 'center';
-        element.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
+        element.style.fontSize = `${Math.max(8, this.settings.elementSize / 3)}px`;
         element.style.fontWeight = 'bold';
         element.style.color = '#333';
         element.style.transition = 'none';
@@ -264,7 +264,7 @@ export class ArrayRenderer extends BaseRenderer {
             ${this.settings.showIndices ? `<div class="index">${element.id.split('_')[1]}</div>` : ''}
         `;
         const indexDiv = element.querySelector('.index');
-        if (indexDiv) indexDiv.style.fontSize = `${Math.max(10, this.settings.elementSize / 4)}px`;
+        if (indexDiv) indexDiv.style.fontSize = `${Math.max(6, this.settings.elementSize / 4)}px`;
         return element;
     }
 
@@ -328,7 +328,7 @@ export class ArrayRenderer extends BaseRenderer {
         this.updateLayout();
         void this.container.offsetHeight;  // commit начального состояния
 
-        el.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+        this._setTransition(el, 'transform 0.3s ease, opacity 0.3s ease');
         el.style.transform = 'scale(1)';
         el.style.opacity = '1';
         await this.sleep(300 / this.settings.speedFactor);
@@ -352,7 +352,7 @@ export class ArrayRenderer extends BaseRenderer {
         const dur = 300 / this.settings.speedFactor;
 
         // Фейд удаляемого элемента — параллельно со сдвигом остальных.
-        el.style.transition = `opacity ${dur}ms ease, transform ${dur}ms ease`;
+        this._setTransition(el, `opacity ${dur}ms ease, transform ${dur}ms ease`);
         el.style.opacity = '0';
         el.style.transform = 'scale(0.6)';
 
@@ -385,7 +385,7 @@ export class ArrayRenderer extends BaseRenderer {
         const step = Math.max(1, Math.min(baseStep, maxTotal / n));
 
         for (const el of elements) {
-            el.style.transition = 'transform 0.3s ease-in-out';
+            this._setTransition(el, 'transform 0.3s ease-in-out');
         }
         void this.container.offsetHeight;        // transition должен «зацепиться»
 
@@ -448,7 +448,7 @@ export class ArrayRenderer extends BaseRenderer {
             const currentTop = parseFloat(element.style.top);
             const targetScreenX = to_x * this.scale + this.offsetX;
             const targetScreenY = to_y * this.scale + this.offsetY;
-            element.style.transition = `transform ${actualDuration}ms ${easing}`;
+            this._setTransition(element, `transform ${actualDuration}ms ${easing}`);
             element.style.transform = `translate(${targetScreenX - currentLeft}px, ${targetScreenY - currentTop}px)`;
         }
         await this.sleep(actualDuration);
@@ -516,8 +516,8 @@ export class ArrayRenderer extends BaseRenderer {
         const pos2 = { x: rect2.left - containerRect.left, y: rect2.top - containerRect.top };
         const actualDuration = duration / this.settings.speedFactor;
 
-        elem1.style.transition = `transform ${actualDuration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
-        elem2.style.transition = `transform ${actualDuration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        this._setTransition(elem1, `transform ${actualDuration}ms cubic-bezier(0.4, 0, 0.2, 1)`);
+        this._setTransition(elem2, `transform ${actualDuration}ms cubic-bezier(0.4, 0, 0.2, 1)`);
         elem1.style.transform = `translate(${pos2.x - pos1.x}px, ${pos2.y - pos1.y}px)`;
         elem2.style.transform = `translate(${pos1.x - pos2.x}px, ${pos1.y - pos2.y}px)`;
         await this.sleep(actualDuration);
@@ -551,15 +551,17 @@ export class ArrayRenderer extends BaseRenderer {
         const newTop2 = parseFloat(elem2.dataset.baseY) * this.scale + this.offsetY;
 
         elem1.style.transition = 'none';
-        elem2.style.transition = 'none';
+        elem2.style.transition = 'none'
+
+        elem1.style.transform = '';
+        elem2.style.transform = '';
         elem1.style.left = `${newLeft1}px`;
         elem1.style.top = `${newTop1}px`;
         elem2.style.left = `${newLeft2}px`;
         elem2.style.top = `${newTop2}px`;
 
-        elem1.style.transform = '';
-        elem2.style.transform = '';
         void elem1.offsetHeight;
+        void elem2.offsetHeight;
         elem1.style.transition = '';
         elem2.style.transition = '';
 
@@ -577,7 +579,7 @@ export class ArrayRenderer extends BaseRenderer {
         for (const id of element_ids) {
             const element = this.elements.get(id);
             if (!element) continue;
-            element.style.transition = `box-shadow ${actualDuration}ms ease, opacity ${actualDuration}ms ease`;
+            this._setTransition(element, `box-shadow ${actualDuration}ms ease, opacity ${actualDuration}ms ease`);
             element.style.opacity = opacity;
             element.style.boxShadow = `0 0 12px 4px ${color}, 0 0 24px 8px ${color}`;
         }
@@ -597,7 +599,7 @@ export class ArrayRenderer extends BaseRenderer {
         for (const id of element_ids) {
             const element = this.elements.get(id);
             if (!element) continue;
-            element.style.transition = `box-shadow ${actualDuration}ms ease, opacity ${actualDuration}ms ease`;
+            this._setTransition(element, `box-shadow ${actualDuration}ms ease, opacity ${actualDuration}ms ease`);
             const defaultBs = element.dataset.defaultBs || '';
             element.style.opacity = 1;
             element.style.boxShadow = defaultBs;
@@ -618,7 +620,7 @@ export class ArrayRenderer extends BaseRenderer {
         for (const id of element_ids) {
             const element = this.elements.get(id);
             if (!element) continue;
-            element.style.transition = `opacity ${actualDuration}ms ease`;
+            this._setTransition(element, `opacity ${actualDuration}ms ease`);
             element.style.opacity = opacity;
         }
         if (!skipAnimation) {

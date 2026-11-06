@@ -37,12 +37,15 @@ export class WindowRenderer {
         this.element.remove();
     }
 
-    setContentHeight(contentHeight) {
+    computeContentHeight(contentHeight) {
         const style = getComputedStyle(this.content);
         const padTop = parseFloat(style.paddingTop) || 0;
         const padBottom = parseFloat(style.paddingBottom) || 0;
-        const total = Math.max(80, Math.ceil(contentHeight + padTop + padBottom));
+        return Math.max(80, Math.ceil(contentHeight + padTop + padBottom));
+    }
 
+    setContentHeight(contentHeight) {
+        const total = this.computeContentHeight(contentHeight);
         if (this._contentHeight === total) return;
         this._contentHeight = total;
         this.content.style.height = total + 'px';

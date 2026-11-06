@@ -19,10 +19,21 @@ export class BaseRenderer {
         this.offsetX = 0;
         this.offsetY = 0;
 
+        // Трансформация вьюпорта (single-режим)
+        this._userTransformed = false;
+        this.zoomEnabled = true;
+        this._dragging = false;
+        this._dragStart = null;
+        this._pinch = null;
+        this._touchMoved = false;
+        this._lastTapTime = 0;
+        this.onSizeChanged = null;
+
         this._contentHeight = 0;
         this.onLayoutChanged = null;
 
         this.initContainer();
+        this._bindViewEvents();
 
         // Наблюдаем за самим контейнером, а не за окном: размер
         // контейнера может меняться без события window.resize
@@ -71,8 +82,18 @@ export class BaseRenderer {
 
         const groupWidth = maxX - minX + targetSize;
         const groupHeight = maxY - minY + targetSize;
-        this.offsetX = (containerRect.width - groupWidth) / 2 - minX;
-        this.offsetY = (containerRect.height - groupHeight) / 2 - minY;
+        const cw = containerRect.width;
+        const ch = containerRect.height;
+
+        if (this._userTransformed) {
+            // Пользователь сам управляет позицией — сохраняем offset,
+            // но не даём сцене выйти за границы (или "улететь" из вида).
+            this.offsetX = this._clampOffset(this.offsetX, minX, maxX, targetSize, cw);
+            this.offsetY = this._clampOffset(this.offsetY, minY, maxY, targetSize, ch);
+        } else {
+            this.offsetX = (cw - groupWidth) / 2 - minX;
+            this.offsetY = (ch - groupHeight) / 2 - minY;
+        }
 
         for (const { el, screenX, screenY } of items) {
             el.style.left = `${screenX + this.offsetX}px`;
@@ -80,8 +101,32 @@ export class BaseRenderer {
         }
 
         // Сохраняем высоту контента для авто-подстройки окна.
+        const oldContentHeight = this._contentHeight;
         this._contentHeight = groupHeight;
-        if (this.onLayoutChanged) this.onLayoutChanged();
+        if (Math.abs(groupHeight - oldContentHeight) > 0.5) {
+            if (this.onLayoutChanged) this.onLayoutChanged();
+        }
+    }
+
+    _clampOffset(offset, minCoord, maxCoord, targetSize, containerSize) {
+        // Положение группы в screen-координатах с учётом offset:
+        //   left = minCoord + offset
+        //   right = maxCoord + offset + targetSize
+        const groupSize = (maxCoord - minCoord) + targetSize;
+
+        if (groupSize <= containerSize) {
+            // Группа меньше контейнера — clamp так, чтобы она не "улетала"
+            // за границы, но могла быть в любом месте внутри.
+            const minAllowed = -minCoord;
+            const maxAllowed = containerSize - maxCoord - targetSize;
+            if (minAllowed > maxAllowed) return offset; // группа шире — fallback
+            return Math.min(Math.max(offset, minAllowed), maxAllowed);
+        } else {
+            // Группа больше контейнера — не показываем "воздух" по краям.
+            const minAllowed = containerSize - maxCoord - targetSize;
+            const maxAllowed = -minCoord;
+            return Math.min(Math.max(offset, minAllowed), maxAllowed);
+        }
     }
 
     getContentHeight() {
@@ -145,7 +190,6 @@ export class BaseRenderer {
 
     // === Диспетчер команд ===
     async executeCommand(command, skipAnimation = false, commandIndex = null) {
-        console.log('Executing command:', command.component, command.params);
         switch (command.component) {
             case 'update_settings':
                 this.updateSettings(command.params);
@@ -165,6 +209,16 @@ export class BaseRenderer {
         // раскрытие. По умолчанию — ничего.
     }
 
+    _setTransition(el, base) {
+        const suffix =
+            ', left var(--lt-speed, 0.3s) ease-in-out' +
+            ', top var(--lt-speed, 0.3s) ease-in-out' +
+            ', width var(--lt-speed, 0.3s) ease-in-out' +
+            ', height var(--lt-speed, 0.3s) ease-in-out' +
+            ', font-size var(--lt-speed, 0.3s) ease-in-out';
+        el.style.transition = base ? (base + suffix) : suffix.slice(2);
+    }
+
     async _handleSpecificCommand(command, skipAnimation) {
         throw new Error(`Unhandled command: ${command.component}`);
     }
@@ -172,5 +226,218 @@ export class BaseRenderer {
     // Абстрактные методы, которые должны быть переопределены
     applySnapshot(snapshot) {
         throw new Error('applySnapshot must be implemented in subclass');
+    }
+
+    // ---------- Трансформация вьюпорта (single-режим) ----------
+
+    _bindViewEvents() {
+        this._onWheelBound = this._onWheel.bind(this);
+        this._onMouseDownBound = this._onMouseDown.bind(this);
+        this._onMouseMoveBound = this._onMouseMove.bind(this);
+        this._onMouseUpBound = this._onMouseUp.bind(this);
+        this._onDblClickBound = this._onDblClick.bind(this);
+
+        this._onTouchStartBound = this._onTouchStart.bind(this);
+        this._onTouchMoveBound = this._onTouchMove.bind(this);
+        this._onTouchEndBound = this._onTouchEnd.bind(this);
+
+        this.container.addEventListener('wheel', this._onWheelBound, { passive: false });
+        this.container.addEventListener('mousedown', this._onMouseDownBound);
+        this.container.addEventListener('dblclick', this._onDblClickBound);
+
+        this.container.addEventListener('touchstart', this._onTouchStartBound, { passive: false });
+        this.container.addEventListener('touchmove', this._onTouchMoveBound, { passive: false });
+        this.container.addEventListener('touchend', this._onTouchEndBound);
+        this.container.addEventListener('touchcancel', this._onTouchEndBound);
+    }
+
+    _onWheel(e) {
+        if (!this.zoomEnabled) return;
+        e.preventDefault();
+
+        const rect = this.container.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        const oldSize = this.settings.elementSize;
+        const oldScale = oldSize / this.baseElementSize;
+        // Мышь указывает на ЦЕНТР виртуального элемента в world-координатах.
+        const wx = (mx - this.offsetX - oldSize / 2) / oldScale;
+        const wy = (my - this.offsetY - oldSize / 2) / oldScale;
+
+        const factor = e.ctrlKey ? 1.03 : 1.10;
+        const mult = e.deltaY > 0 ? 1 / factor : factor;
+        let newSize = oldSize * mult;
+        newSize = Math.max(15, Math.min(250, newSize));
+        if (Math.abs(newSize - oldSize) < 0.01) return;
+
+        this.settings.elementSize = newSize;
+        this._userTransformed = true;
+
+        const newScale = newSize / this.baseElementSize;
+        this.offsetX = mx - newSize / 2 - wx * newScale;
+        this.offsetY = my - newSize / 2 - wy * newScale;
+
+        this._onSettingsChanged();
+        this.updateLayout();
+
+        if (this.onSizeChanged) this.onSizeChanged(newSize);
+    }
+
+    _onMouseDown(e) {
+        if (!this.zoomEnabled || e.button !== 0) return;
+        e.preventDefault();
+        this._dragging = true;
+        this._dragStart = {
+            x: e.clientX, y: e.clientY,
+            offsetX: this.offsetX, offsetY: this.offsetY,
+        };
+        this.container.style.cursor = 'grabbing';
+        this.container.style.setProperty('--lt-speed', '0.1s');
+        document.addEventListener('mousemove', this._onMouseMoveBound);
+        document.addEventListener('mouseup', this._onMouseUpBound);
+    }
+
+    _onMouseMove(e) {
+        if (!this._dragging) return;
+        const dx = e.clientX - this._dragStart.x;
+        const dy = e.clientY - this._dragStart.y;
+        this.offsetX = this._dragStart.offsetX + dx;
+        this.offsetY = this._dragStart.offsetY + dy;
+        this._userTransformed = true;
+        this.updateLayout();
+    }
+
+    _onMouseUp(e) {
+        if (!this._dragging) return;
+        this._dragging = false;
+        this.container.style.removeProperty('--lt-speed');
+        this.container.style.cursor = this.zoomEnabled ? 'grab' : '';
+        document.removeEventListener('mousemove', this._onMouseMoveBound);
+        document.removeEventListener('mouseup', this._onMouseUpBound);
+    }
+
+    _onTouchStart(e) {
+        if (!this.zoomEnabled) return;
+        if (e.touches.length === 1) {
+            e.preventDefault();
+            const t = e.touches[0];
+            this._dragging = true;
+            this._dragStart = {
+                x: t.clientX, y: t.clientY,
+                offsetX: this.offsetX, offsetY: this.offsetY,
+            };
+            this._touchMoved = false;
+            this.container.style.setProperty('--lt-speed', '0.1s');
+        } else if (e.touches.length === 2) {
+            e.preventDefault();
+            this._dragging = false;
+            // Pinch — не тап.
+            this._touchMoved = true;
+            const t1 = e.touches[0], t2 = e.touches[1];
+            const rect = this.container.getBoundingClientRect();
+            this._pinch = {
+                startDist: Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY),
+                startSize: this.settings.elementSize,
+                startOffsetX: this.offsetX,
+                startOffsetY: this.offsetY,
+                mx: (t1.clientX + t2.clientX) / 2 - rect.left,
+                my: (t1.clientY + t2.clientY) / 2 - rect.top,
+            };
+            this.container.style.setProperty('--lt-speed', '0.1s');
+        }
+    }
+
+    _onTouchMove(e) {
+        if (!this.zoomEnabled) return;
+        if (this._pinch && e.touches.length === 2) {
+            e.preventDefault();
+            const t1 = e.touches[0], t2 = e.touches[1];
+            const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            const ratio = dist / this._pinch.startDist;
+
+            const oldSize = this._pinch.startSize;
+            const oldScale = oldSize / this.baseElementSize;
+            const wx = (this._pinch.mx - this._pinch.startOffsetX - oldSize / 2) / oldScale;
+            const wy = (this._pinch.my - this._pinch.startOffsetY - oldSize / 2) / oldScale;
+
+            let newSize = oldSize * ratio;
+            newSize = Math.max(15, Math.min(250, newSize));
+
+            this.settings.elementSize = newSize;
+            this._userTransformed = true;
+
+            const newScale = newSize / this.baseElementSize;
+            this.offsetX = this._pinch.mx - newSize / 2 - wx * newScale;
+            this.offsetY = this._pinch.my - newSize / 2 - wy * newScale;
+
+            this._onSettingsChanged();
+            this.updateLayout();
+
+            if (this.onSizeChanged) this.onSizeChanged(newSize);
+        } else if (this._dragging && e.touches.length === 1) {
+            e.preventDefault();
+            const t = e.touches[0];
+            const dx = t.clientX - this._dragStart.x;
+            const dy = t.clientY - this._dragStart.y;
+            // Отмечаем "двигался" только при реальном сдвиге,
+            // чтобы тап не считался drag-ом.
+            if (Math.hypot(dx, dy) > 5) this._touchMoved = true;
+            this.offsetX = this._dragStart.offsetX + dx;
+            this.offsetY = this._dragStart.offsetY + dy;
+            this._userTransformed = true;
+            this.updateLayout();
+        }
+    }
+
+    _onTouchEnd(e) {
+        if (e.touches.length === 0) {
+            // Детектор двойного тапа: если это не drag и не pinch
+            // и два тапа подряд в пределах 300ms — центрируем сцену.
+            if (!this._touchMoved && !this._pinch) {
+                const now = Date.now();
+                if (this._lastTapTime && now - this._lastTapTime < 300) {
+                    this._onDblClick({ preventDefault: () => {} });
+                    this._lastTapTime = 0;
+                } else {
+                    this._lastTapTime = now;
+                }
+            }
+            this._pinch = null;
+            this._dragging = false;
+            this._dragStart = null;
+            this._touchMoved = false;
+            this.container.style.removeProperty('--lt-speed');
+        } else if (e.touches.length === 1) {
+            // Один палец остался после pinch — переходим в pan.
+            this._pinch = null;
+            this._dragging = true;
+            this._touchMoved = true;  // не считаем завершение pinch тапом
+            const t = e.touches[0];
+            this._dragStart = {
+                x: t.clientX, y: t.clientY,
+                offsetX: this.offsetX, offsetY: this.offsetY,
+            };
+        }
+    }
+
+    _onDblClick(e) {
+        if (!this.zoomEnabled) return;
+        e.preventDefault();
+        // Двойной клик только центрирует сцену. Размер элемента
+        // (масштаб) не сбрасывается — им управляют слайдер/колесо.
+        this._userTransformed = false;
+        this.updateLayout();
+    }
+
+    setZoomEnabled(enabled) {
+        this.zoomEnabled = !!enabled;
+        if (enabled) {
+            this.container.style.cursor = 'grab';
+            this.container.style.touchAction = 'none';
+        } else {
+            this.container.style.cursor = '';
+            this.container.style.touchAction = '';
+        }
     }
 }

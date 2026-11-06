@@ -19,6 +19,7 @@ export class SceneRenderer {
 
         this.activeTab = 'all';   // 'all' | 'window:<id>'
         this.onWindowsChanged = null;
+        this.onSizeChanged = null;
         this._notificationContainer = null;
         this._updatingHeights = false;
 
@@ -90,6 +91,10 @@ export class SceneRenderer {
             const r = new RendererClass(host);
             r.updateSettings(this.settings);
             r.onLayoutChanged = () => this._updateWindowHeights();
+            r.onSizeChanged = (size) => {
+                if (this.onSizeChanged) this.onSizeChanged(size);
+            };
+            r.setZoomEnabled(this.activeTab !== 'all');
             this.renderers.set(name, r);
             r.applySnapshot(frag);
         }
@@ -215,6 +220,10 @@ export class SceneRenderer {
         const r = new RendererClass(host);
         r.updateSettings(this.settings);
         r.onLayoutChanged = () => this._updateWindowHeights();
+        r.onSizeChanged = (size) => {
+            if (this.onSizeChanged) this.onSizeChanged(size);
+        };
+        r.setZoomEnabled(this.activeTab !== 'all');
         this.renderers.set(structureName, r);
         return r;
     }
@@ -354,6 +363,19 @@ export class SceneRenderer {
     async setActiveTab(tabId, skipAnimation = false) {
         this.activeTab = tabId;
 
+        // Зум и панорамирование разрешены только в single-режиме.
+        const isSingle = tabId !== 'all';
+        for (const r of this.renderers.values()) {
+            if (!isSingle) {
+                // В All — сбрасываем панорамирование, возвращаем авцентрирование.
+                // Размер элемента (elementSize) не трогаем — это глобальная
+                // настройка, общая для всех режимов.
+                r._userTransformed = false;
+                if (r.updateLayout) r.updateLayout();
+            }
+            if (r.setZoomEnabled) r.setZoomEnabled(isSingle);
+        }
+
         let targets;
         if (tabId === 'all') {
             targets = Array.from(this.renderers.values());
@@ -396,12 +418,22 @@ export class SceneRenderer {
         this._updatingHeights = true;
         try {
             const isAll = this.activeTab === 'all';
-            const toRelayout = [];
+
+            // Проход 1: вычисляем, нужно ли что-то менять. Если нет —
+            // выходим ДО commitLayout (иначе no-transition на всей
+            // сцене убивает панорамирование).
+            const pending = [];
+            let anyChanged = false;
+
             for (const [wid, wr] of this.windows) {
                 if (!isAll) {
-                    wr.clearContentHeight();
+                    if (wr._contentHeight !== null) {
+                        anyChanged = true;
+                        pending.push({ wr, contentHeight: null });
+                    }
                     continue;
                 }
+
                 let maxH = 0;
                 const renderersInWindow = [];
                 for (const [name, r] of this.renderers) {
@@ -411,16 +443,35 @@ export class SceneRenderer {
                         renderersInWindow.push(r);
                     }
                 }
+
                 if (maxH > 0) {
-                    wr.setContentHeight(maxH);
-                    toRelayout.push(...renderersInWindow);
-                } else {
-                    wr.clearContentHeight();
+                    const total = wr.computeContentHeight(maxH);
+                    if (wr._contentHeight !== total) {
+                        anyChanged = true;
+                        pending.push({ wr, contentHeight: maxH, renderers: renderersInWindow });
+                    }
+                } else if (wr._contentHeight !== null) {
+                    anyChanged = true;
+                    pending.push({ wr, contentHeight: null });
                 }
             }
-            for (const r of toRelayout) {
-                if (r.updateLayout) r.updateLayout();
-            }
+
+            if (!anyChanged) return;
+
+            // Проход 2: применяем всё в commitLayout (без transition,
+            // чтобы смена высоты не «плыла»).
+            const toRelayout = [];
+            const mutator = () => {
+                for (const p of pending) {
+                    if (p.contentHeight === null) {
+                        p.wr.clearContentHeight();
+                    } else {
+                        p.wr.setContentHeight(p.contentHeight);
+                        toRelayout.push(...p.renderers);
+                    }
+                }
+            };
+            this.commitLayout(mutator, toRelayout);
         } finally {
             this._updatingHeights = false;
         }

@@ -179,7 +179,13 @@ body::after {
 }
 
 .visualization-element {
-    transition: all 0.3s ease-in-out;
+    transition:
+        all var(--lt-speed, 0.3s) ease-in-out,
+        left var(--lt-speed, 0.3s) ease-in-out,
+        top var(--lt-speed, 0.3s) ease-in-out,
+        width var(--lt-speed, 0.3s) ease-in-out,
+        height var(--lt-speed, 0.3s) ease-in-out,
+        font-size var(--lt-speed, 0.3s) ease-in-out;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     position: relative;
 }
@@ -628,6 +634,14 @@ body::after {
     padding: 10px;
     background: transparent;
     border-radius: 0;
+}
+
+.scene-container.mode-single .scene-window-content {
+    cursor: grab;
+}
+
+.scene-container.mode-single .scene-window-content:active {
+    cursor: grabbing;
 }
 
 .no-transition,
