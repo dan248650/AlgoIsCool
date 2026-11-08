@@ -142,14 +142,7 @@
             element_size: 60,
         };
 
-        let inputData = {
-            input_array: serverInputData.input_array || [64, 34, 25, 12, 22, 11, 90],
-            target: serverInputData.target !== undefined ? serverInputData.target : undefined,
-            nodes: serverInputData.nodes || [],
-            edges: serverInputData.edges || [],
-            directed: serverInputData.directed !== undefined ? serverInputData.directed : false,
-            start_node: serverInputData.start_node !== undefined ? serverInputData.start_node : 0,
-        };
+        let inputData = { ...serverInputData };
 
         // DOM элементы
         const container = document.getElementById('visualization-area');
@@ -208,22 +201,19 @@
                 // Настраиваем форму ввода
                 if (algorithm.input_schema) {
                     inputFormHandler = new InputFormHandler(inputContainer, algorithm.input_schema, inputData);
-                    const currentData = inputFormHandler.getData();
-                    const needRandom = !currentData.nodes || currentData.nodes.length === 0;
+
+                    const schemaKeys = Object.keys(algorithm.input_schema);
+                    const needRandom = schemaKeys.some(key => {
+                        const v = inputData[key];
+                        if (v === undefined || v === null || v === '') return true;
+                        if (Array.isArray(v) && v.length === 0) return true;
+                        return false;
+                    });
                     if (needRandom) {
                         const randomData = inputFormHandler.generateRandom();
                         Object.assign(inputData, randomData);
                     }
-                    const schemaKeys = Object.keys(algorithm.input_schema);
-                    const hasData = schemaKeys.some(key =>
-                        inputData[key] !== undefined &&
-                        (Array.isArray(inputData[key]) ? inputData[key].length > 0 : true)
-                    );
-                    if (!hasData) {
-                        const randomData = inputFormHandler.generateRandom();
-                        Object.assign(inputData, randomData);
-                    }
-                    // Переназначаем обработчики кнопок
+
                     applyArrayBtn.onclick = () => {
                         const newData = inputFormHandler.getData();
                         if (newData) {

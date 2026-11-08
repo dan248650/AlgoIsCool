@@ -71,6 +71,12 @@ export class InputFormHandler {
                 input = document.createElement('input');
                 input.type = 'text';
                 input.placeholder = 'метки узлов через запятую (A,B,C)';
+            } else if (type === 'string') {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = 'строка (например, abacaba)';
+                if (c.min_length !== undefined) input.minLength = c.min_length;
+                if (c.max_length !== undefined) input.maxLength = c.max_length;
             } else if (type === 'graph_edges') {
                 input = document.createElement('input');
                 input.type = 'text';
@@ -86,16 +92,31 @@ export class InputFormHandler {
         }
     }
 
+    // Базовая метка по типу поля. Используется, если автор не задал
+    // constraints.label в input_schema.
+    static TYPE_LABELS = {
+        'array': 'Массив',
+        'number': 'Число',
+        'string': 'Строка',
+        'boolean': 'Флаг',
+        'graph_nodes': 'Узлы',
+        'graph_edges': 'Рёбра',
+    };
+
+    static FIELD_LABELS = {
+        'start_node': 'Стартовая вершина (индекс)',
+        'directed': 'Ориентированный граф',
+        'target': 'Целевое значение',
+    };
+
     getLabel(field) {
-        const labels = {
-            input_array: 'Массив',
-            target: 'Целевое значение',
-            nodes: 'Узлы (метки)',
-            edges: 'Рёбра',
-            directed: 'Ориентированный граф',
-            start_node: 'Стартовая вершина (индекс)'
-        };
-        return labels[field] || field;
+        const spec = this.schema[field];
+        if (spec?.constraints?.label) return spec.constraints.label;
+        if (InputFormHandler.FIELD_LABELS[field]) return InputFormHandler.FIELD_LABELS[field];
+        if (spec?.type && InputFormHandler.TYPE_LABELS[spec.type]) {
+            return InputFormHandler.TYPE_LABELS[spec.type];
+        }
+        return field;
     }
 
     _parseField(input, spec) {
@@ -112,6 +133,9 @@ export class InputFormHandler {
         }
         if (type === 'boolean') {
             return input.checked;
+        }
+        if (type === 'string') {
+            return input.value;
         }
         if (type === 'graph_nodes') {
             const str = input.value.trim();
@@ -171,6 +195,16 @@ export class InputFormHandler {
         }
         if (c.sorted === 'descending') {
             for (let i = 1; i < value.length; i++) if (value[i] > value[i - 1]) return 'должен быть по убыванию';
+        }
+        return null;
+    }
+
+    _validateString(value, c) {
+        if (typeof value !== 'string') return 'должно быть строкой';
+        if (c.min_length !== undefined && value.length < c.min_length) return `длина должна быть >= ${c.min_length}`;
+        if (c.max_length !== undefined && value.length > c.max_length) return `длина должна быть <= ${c.max_length}`;
+        if (c.alphabet && value.split('').some(ch => c.alphabet.indexOf(ch) < 0)) {
+            return `символы должны быть из множества "${c.alphabet}"`;
         }
         return null;
     }
@@ -258,6 +292,7 @@ export class InputFormHandler {
         const dependsValue = spec.depends_on ? data[spec.depends_on] : undefined;
         if (type === 'number') return this._validateNumber(value, c, dependsValue);
         if (type === 'array') return this._validateArray(value, c);
+        if (type === 'string') return this._validateString(value, c);
         if (type === 'graph_nodes') return this._validateGraphNodes(value, c);
         if (type === 'graph_edges') return this._validateGraphEdges(value, c, dependsValue);
         return null;
@@ -292,6 +327,8 @@ export class InputFormHandler {
                 input.value = (value === undefined || value === null || Number.isNaN(value)) ? '' : value;
             } else if (type === 'boolean') {
                 input.checked = !!value;
+            } else if (type === 'string') {
+                input.value = (value === undefined || value === null) ? '' : String(value);
             } else if (type === 'graph_nodes') {
                 input.value = Array.isArray(value) ? value.map(n => n.label || n).join(',') : '';
             } else if (type === 'graph_edges') {
@@ -354,6 +391,18 @@ export class InputFormHandler {
         if (c.sorted === 'ascending') arr.sort((a, b) => a - b);
         else if (c.sorted === 'descending') arr.sort((a, b) => b - a);
         return arr;
+    }
+
+    _generateString(c) {
+        const alphabet = c.alphabet || 'abc';
+        const minLen = c.min_length ?? 5;
+        const maxLen = c.max_length ?? 12;
+        const len = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
+        let out = '';
+        for (let i = 0; i < len; i++) {
+            out += alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+        return out;
     }
 
     _generateNodes(c) {
@@ -421,7 +470,8 @@ export class InputFormHandler {
                 const c = spec.constraints || {};
                 const dep = spec.depends_on ? randomData[spec.depends_on] : undefined;
 
-                if (spec.type === 'graph_nodes') randomData[field] = this._generateNodes(c);
+                if (spec.type === 'string') randomData[field] = this._generateString(c);
+                else if (spec.type === 'graph_nodes') randomData[field] = this._generateNodes(c);
                 else if (spec.type === 'graph_edges') randomData[field] = this._generateEdges(c, dep);
                 else if (spec.type === 'array') randomData[field] = this._generateArray(c);
                 else if (spec.type === 'number') randomData[field] = this._generateNumber(field, c, dep);

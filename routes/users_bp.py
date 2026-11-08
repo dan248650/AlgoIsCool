@@ -28,7 +28,6 @@ def edit_user(id):
         form.age.data = user.age
         form.address.data = user.address
         form.email.data = user.email
-        form.background_image.data = user.get_settings()['background_image']
         form.roles.data = [r.id for r in user.roles]
         form.active.data = user.active
 
@@ -51,7 +50,6 @@ def edit_user(id):
         user.age = form.age.data
         user.address = form.address.data
         user.email = form.email.data
-        user.update_settings(background_image=form.background_image.data)
         user.active = form.active.data
 
         if current_user.is_admin() and form.roles.data:

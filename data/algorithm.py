@@ -965,3 +965,491 @@ def add_trapping_rain_water():
         definition_python=python_code,
         definition_mode='python',
     )
+
+
+def add_prefix_function():
+    python_code = (
+        'w = Window("main")\n'
+        's = Vector(input_string)\n'
+        'pi = Vector([])\n'
+        'w.attach(s)\n'
+        'w.attach(pi)\n'
+        'n = len(input_string)\n'
+        'for k in range(n):\n'
+        '    pi.append(0)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(1, n):\n'
+        '    s.highlight(i, "yellow")\n'
+        '    pi.highlight(i - 1, "cyan")\n'
+        '    wait(400)\n'
+        '    j = pi.value_at(i - 1)\n'
+        '\n'
+        '    while j > 0:\n'
+        '        s.highlight(j, "orange")\n'
+        '        wait(300)\n'
+        '        if s.value_at(i) == s.value_at(j):\n'
+        '            break\n'
+        '        s.highlight(i, "red")\n'
+        '        s.highlight(j, "red")\n'
+        '        wait(300)\n'
+        '        s.unhighlight(j)\n'
+        '        s.highlight(i, "yellow")\n'
+        '        pi.highlight(j - 1, "red")\n'
+        '        wait(300)\n'
+        '        pi.unhighlight(j - 1)\n'
+        '        j = pi.value_at(j - 1)\n'
+        '    pi.unhighlight(i - 1)\n'
+        '\n'
+        '    s.highlight(j, "orange")\n'
+        '    wait(200)\n'
+        '    if s.value_at(i) == s.value_at(j):\n'
+        '        s.highlight(i, "green")\n'
+        '        s.highlight(j, "green")\n'
+        '        wait(400)\n'
+        '        s.unhighlight(j)\n'
+        '        j = j + 1\n'
+        '    else:\n'
+        '        s.highlight(i, "red")\n'
+        '        s.highlight(j, "red")\n'
+        '        wait(300)\n'
+        '        s.unhighlight(j)\n'
+        '    s.unhighlight(i)\n'
+        '\n'
+        '    pi.set(i, j)\n'
+        '    pi.highlight(i, "green")\n'
+        '    wait(400)\n'
+        '    pi.unhighlight(i)\n'
+    )
+    default_input = {"input_string": "abacaba"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="prefix-function",
+        name="Prefix function",
+        display_name="Prefix-функция (KMP)",
+        category_id="search",
+        description_short="Массив длин наибольших собственных префиксов-суффиксов",
+        description_full="pi[i] — длина наибольшего префикса строки s, который одновременно является суффиксом подстроки s[0..i]. Строится за O(n) с использованием уже посчитанных pi.",
+        complexity="O(n)",
+        icon="π",
+        order_index=100,
+        default_input_data=default_input,
+        input_schema={
+            "input_string": {"type": "string",
+                             "constraints": {"min_length": 5, "max_length": 12, "alphabet": "ab"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_z_function():
+    python_code = (
+        'w = Window("main")\n'
+        's = Vector(input_string)\n'
+        'z = Vector([])\n'
+        'w.attach(s)\n'
+        'w.attach(z)\n'
+        'n = len(input_string)\n'
+        'for k in range(n):\n'
+        '    z.append(0)\n'
+        'wait(500)\n'
+        '\n'
+        'l = 0\n'
+        'r = 0\n'
+        'for i in range(1, n):\n'
+        '    s.highlight(i, "yellow")\n'
+        '    wait(400)\n'
+        '\n'
+        '    if i < r:\n'
+        '        sym = i - l\n'
+        '        s.highlight(sym, "cyan")\n'
+        '        z.highlight(sym, "cyan")\n'
+        '        wait(300)\n'
+        '        zi = z.value_at(sym)\n'
+        '        if r - i < zi:\n'
+        '            zi = r - i\n'
+        '        z.set(i, zi)\n'
+        '        z.highlight(i, "orange")\n'
+        '        wait(300)\n'
+        '        s.unhighlight(sym)\n'
+        '        z.unhighlight(sym)\n'
+        '        z.unhighlight(i)\n'
+        '\n'
+        '    while i + z.value_at(i) < n:\n'
+        '        left = z.value_at(i)\n'
+        '        s.highlight(left, "orange")\n'
+        '        s.highlight(i + left, "orange")\n'
+        '        wait(300)\n'
+        '        if s.value_at(left) != s.value_at(i + left):\n'
+        '            s.highlight(left, "red")\n'
+        '            s.highlight(i + left, "red")\n'
+        '            wait(300)\n'
+        '            s.unhighlight(left)\n'
+        '            s.unhighlight(i + left)\n'
+        '            break\n'
+        '        s.highlight(left, "green")\n'
+        '        s.highlight(i + left, "green")\n'
+        '        wait(300)\n'
+        '        s.unhighlight(left)\n'
+        '        s.unhighlight(i + left)\n'
+        '        z.set(i, left + 1)\n'
+        '\n'
+        '    if i + z.value_at(i) > r:\n'
+        '        l = i\n'
+        '        r = i + z.value_at(i)\n'
+        '\n'
+        '    z.highlight(i, "green")\n'
+        '    s.unhighlight(i)\n'
+        '    wait(400)\n'
+        '    z.unhighlight(i)\n'
+    )
+    default_input = {"input_string": "abacaba"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="z-function",
+        name="Z function",
+        display_name="Z-функция",
+        category_id="search",
+        description_short="Z[i] — длина наибольшего общего префикса строки и её суффикса от i",
+        description_full="Z[i] — длина наибольшего общего префикса строки s и её суффикса s[i..n-1]. Строится за O(n) через «Z-блок» [l, r).",
+        complexity="O(n)",
+        icon="Z",
+        order_index=101,
+        default_input_data=default_input,
+        input_schema={
+            "input_string": {"type": "string",
+                             "constraints": {"min_length": 5, "max_length": 12, "alphabet": "ab"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_manacher():
+    python_code = (
+        'w = Window("main")\n'
+        's = Vector(input_string)\n'
+        'd1 = Vector([])\n'
+        'w.attach(s)\n'
+        'w.attach(d1)\n'
+        'n = len(input_string)\n'
+        'for k in range(n):\n'
+        '    d1.append(0)\n'
+        'wait(500)\n'
+        '\n'
+        'l = 0\n'
+        'r = -1\n'
+        'for i in range(n):\n'
+        '    s.highlight(i, "yellow")\n'
+        '    wait(400)\n'
+        '\n'
+        '    if i > r:\n'
+        '        k = 1\n'
+        '    else:\n'
+        '        sym = l + r - i\n'
+        '        s.highlight(sym, "cyan")\n'
+        '        d1.highlight(sym, "cyan")\n'
+        '        wait(300)\n'
+        '        k = d1.value_at(sym)\n'
+        '        if r - i + 1 < k:\n'
+        '            k = r - i + 1\n'
+        '        s.unhighlight(sym)\n'
+        '        d1.unhighlight(sym)\n'
+        '\n'
+        '    while i + k < n and i - k >= 0:\n'
+        '        s.highlight(i - k, "orange")\n'
+        '        s.highlight(i + k, "orange")\n'
+        '        wait(300)\n'
+        '        if s.value_at(i - k) != s.value_at(i + k):\n'
+        '            s.highlight(i - k, "red")\n'
+        '            s.highlight(i + k, "red")\n'
+        '            wait(300)\n'
+        '            s.unhighlight(i - k)\n'
+        '            s.unhighlight(i + k)\n'
+        '            break\n'
+        '        s.highlight(i - k, "green")\n'
+        '        s.highlight(i + k, "green")\n'
+        '        wait(300)\n'
+        '        s.unhighlight(i - k)\n'
+        '        s.unhighlight(i + k)\n'
+        '        k = k + 1\n'
+        '\n'
+        '    d1.set(i, k)\n'
+        '    if i + k - 1 > r:\n'
+        '        l = i - k + 1\n'
+        '        r = i + k - 1\n'
+        '    d1.highlight(i, "green")\n'
+        '    s.unhighlight(i)\n'
+        '    wait(400)\n'
+        '    d1.unhighlight(i)\n'
+    )
+    default_input = {"input_string": "abacabadabacaba"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="manacher",
+        name="Manacher",
+        display_name="Алгоритм Манакера",
+        category_id="search",
+        description_short="Радиусы всех нечётных палиндромов за линейное время",
+        description_full="d1[i] — количество нечётных палиндромов с центром в i. Использует уже известный блок [l, r) самого правого палиндрома для ускорения.",
+        complexity="O(n)",
+        icon="◯",
+        order_index=102,
+        default_input_data=default_input,
+        input_schema={
+            "input_string": {"type": "string",
+                             "constraints": {"min_length": 5, "max_length": 15, "alphabet": "abcd"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_kmp():
+    python_code = (
+        'w = Window("main")\n'
+        'text = Vector(input_text)\n'
+        'pattern = Vector(input_pattern)\n'
+        'pi = Vector([])\n'
+        'w.attach(text)\n'
+        'w.attach(pattern)\n'
+        'w.attach(pi)\n'
+        'n = len(input_text)\n'
+        'm = len(input_pattern)\n'
+        'for k in range(m):\n'
+        '    pi.append(0)\n'
+        'wait(400)\n'
+        '\n'
+        'for i in range(1, m):\n'
+        '    pattern.highlight(i, "yellow")\n'
+        '    pi.highlight(i - 1, "cyan")\n'
+        '    wait(300)\n'
+        '    j = pi.value_at(i - 1)\n'
+        '    while j > 0:\n'
+        '        pattern.highlight(j, "orange")\n'
+        '        wait(200)\n'
+        '        if pattern.value_at(i) == pattern.value_at(j):\n'
+        '            pattern.highlight(i, "green")\n'
+        '            pattern.highlight(j, "green")\n'
+        '            wait(300)\n'
+        '            pattern.unhighlight(j)\n'
+        '            break\n'
+        '        pattern.highlight(i, "red")\n'
+        '        pattern.highlight(j, "red")\n'
+        '        wait(200)\n'
+        '        pattern.unhighlight(j)\n'
+        '        pattern.highlight(i, "yellow")\n'
+        '        pi.highlight(j - 1, "red")\n'
+        '        wait(200)\n'
+        '        pi.unhighlight(j - 1)\n'
+        '        j = pi.value_at(j - 1)\n'
+        '    pi.unhighlight(i - 1)\n'
+        '    if pattern.value_at(i) == pattern.value_at(j):\n'
+        '        j = j + 1\n'
+        '    pi.set(i, j)\n'
+        '    pi.highlight(i, "green")\n'
+        '    pattern.unhighlight(i)\n'
+        '    wait(300)\n'
+        '    pi.unhighlight(i)\n'
+        '\n'
+        'j = 0\n'
+        'for i in range(n):\n'
+        '    text.highlight(i, "yellow")\n'
+        '    wait(250)\n'
+        '    while j > 0:\n'
+        '        if text.value_at(i) == pattern.value_at(j):\n'
+        '            break\n'
+        '        for s2 in range(m):\n'
+        '            pattern.unhighlight(s2)\n'
+        '        pattern.highlight(j - 1, "red")\n'
+        '        pi.highlight(j - 1, "red")\n'
+        '        wait(300)\n'
+        '        pattern.unhighlight(j - 1)\n'
+        '        pi.unhighlight(j - 1)\n'
+        '        j = pi.value_at(j - 1)\n'
+        '        for s2 in range(j):\n'
+        '            pattern.highlight(s2, "green")\n'
+        '        wait(200)\n'
+        '    if text.value_at(i) == pattern.value_at(j):\n'
+        '        pattern.highlight(j, "green")\n'
+        '        j = j + 1\n'
+        '    else:\n'
+        '        for s2 in range(m):\n'
+        '            pattern.unhighlight(s2)\n'
+        '    text.unhighlight(i)\n'
+        '    if j == m:\n'
+        '        for s2 in range(m):\n'
+        '            text.highlight(i - m + 1 + s2, "green")\n'
+        '        wait(500)\n'
+        '        j = pi.value_at(m - 1)\n'
+        '        for s2 in range(m):\n'
+        '            pattern.unhighlight(s2)\n'
+        '        for s2 in range(j):\n'
+        '            pattern.highlight(s2, "green")\n'
+        '    wait(150)\n'
+        '\n'
+        'for s2 in range(m):\n'
+        '    pattern.unhighlight(s2)\n'
+    )
+    default_input = {"input_text": "abcabcabd", "input_pattern": "abcab"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="kmp",
+        name="KMP",
+        display_name="Поиск подстроки (KMP)",
+        category_id="search",
+        description_short="Поиск подстроки через prefix-функцию паттерна",
+        description_full="Сначала строится pi-функция для паттерна. Затем паттерн «скользит» по тексту: при несовпадении j откатывается по pi, а не на начало. Три структуры: text, pattern, pi.",
+        complexity="O(n + m)",
+        icon="KMP",
+        order_index=103,
+        default_input_data=default_input,
+        input_schema={
+            "input_text": {"type": "string",
+                           "constraints": {"min_length": 8, "max_length": 14, "alphabet": "abcd"}},
+            "input_pattern": {"type": "string",
+                              "constraints": {"min_length": 3, "max_length": 6, "alphabet": "abcd"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_boyer_moore():
+    python_code = (
+        'w = Window("main")\n'
+        'text = Vector(input_text)\n'
+        'pattern = Vector(input_pattern)\n'
+        'bc_keys = Vector([])\n'
+        'bc_vals = Vector([])\n'
+        'w.attach(text)\n'
+        'w.attach(pattern)\n'
+        'w.attach(bc_keys)\n'
+        'w.attach(bc_vals)\n'
+        'n = len(input_text)\n'
+        'm = len(input_pattern)\n'
+        'wait(400)\n'
+        '\n'
+        '# Фаза 1: bad_char таблица\n'
+        'for i in range(m):\n'
+        '    pattern.highlight(i, "yellow")\n'
+        '    wait(300)\n'
+        '    ch = pattern.value_at(i)\n'
+        '    found = -1\n'
+        '    for k in range(bc_keys.size()):\n'
+        '        bc_keys.highlight(k, "cyan")\n'
+        '        bc_vals.highlight(k, "cyan")\n'
+        '        wait(200)\n'
+        '        if bc_keys.value_at(k) == ch:\n'
+        '            found = k\n'
+        '            bc_keys.unhighlight(k)\n'
+        '            bc_vals.unhighlight(k)\n'
+        '            break\n'
+        '        bc_keys.unhighlight(k)\n'
+        '        bc_vals.unhighlight(k)\n'
+        '    if found == -1:\n'
+        '        bc_keys.append(ch)\n'
+        '        bc_vals.append(i)\n'
+        '        bc_keys.highlight(bc_keys.size() - 1, "green")\n'
+        '        bc_vals.highlight(bc_vals.size() - 1, "green")\n'
+        '        wait(300)\n'
+        '    else:\n'
+        '        bc_vals.set(found, i)\n'
+        '        bc_vals.highlight(found, "green")\n'
+        '        wait(300)\n'
+        '    # Сброс всей подсветки таблицы после итерации —\n'
+        '    # иначе cyan/зелёный копится и остаётся до конца алгоритма.\n'
+        '    for k2 in range(bc_keys.size()):\n'
+        '        bc_keys.unhighlight(k2)\n'
+        '        bc_vals.unhighlight(k2)\n'
+        '    pattern.unhighlight(i)\n'
+        '\n'
+        '# Фаза 2: поиск\n'
+        'i = 0\n'
+        'while i <= n - m:\n'
+        '    j = m - 1\n'
+        '    while j >= 0:\n'
+        '        text.highlight(i + j, "yellow")\n'
+        '        pattern.highlight(j, "yellow")\n'
+        '        wait(300)\n'
+        '        if text.value_at(i + j) != pattern.value_at(j):\n'
+        '            text.highlight(i + j, "red")\n'
+        '            pattern.highlight(j, "red")\n'
+        '            wait(400)\n'
+        '            text.unhighlight(i + j)\n'
+        '            pattern.unhighlight(j)\n'
+        '            break\n'
+        '        text.unhighlight(i + j)\n'
+        '        pattern.unhighlight(j)\n'
+        '        j = j - 1\n'
+        '    if j < 0:\n'
+        '        for s2 in range(m):\n'
+        '            text.highlight(i + s2, "green")\n'
+        '        wait(500)\n'
+        '        i = i + 1\n'
+        '    else:\n'
+        '        c = text.value_at(i + j)\n'
+        '        found = -1\n'
+        '        for k in range(bc_keys.size()):\n'
+        '            bc_keys.highlight(k, "cyan")\n'
+        '            wait(150)\n'
+        '            if bc_keys.value_at(k) == c:\n'
+        '                found = k\n'
+        '                bc_vals.highlight(k, "cyan")\n'
+        '                wait(300)\n'
+        '                bc_keys.unhighlight(k)\n'
+        '                bc_vals.unhighlight(k)\n'
+        '                break\n'
+        '            bc_keys.unhighlight(k)\n'
+        '        if found == -1:\n'
+        '            shift = j + 1\n'
+        '        else:\n'
+        '            shift = j - bc_vals.value_at(found)\n'
+        '        if shift < 1:\n'
+        '            shift = 1\n'
+        '        i = i + shift\n'
+        '        wait(300)\n'
+    )
+    default_input = {"input_text": "abcabcabd", "input_pattern": "abcab"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="boyer-moore",
+        name="Boyer-Moore",
+        display_name="Поиск подстроки (Boyer-Moore)",
+        category_id="search",
+        description_short="Поиск подстроки через bad-character эвристику",
+        description_full="Сравнение с конца паттерна. При несовпадении символ text[i+j] ищется в таблице bad_char (последняя позиция в паттерне); паттерн сдвигается на j − bc[c] (или j+1, если символа нет). Четыре структуры: text, pattern, bc_keys, bc_vals.",
+        complexity="O(n·m) худший, O(n/m) средний",
+        icon="BM",
+        order_index=104,
+        default_input_data=default_input,
+        input_schema={
+            "input_text": {"type": "string",
+                           "constraints": {"min_length": 8, "max_length": 14, "alphabet": "abcd"}},
+            "input_pattern": {"type": "string",
+                              "constraints": {"min_length": 3, "max_length": 6, "alphabet": "abcd"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )

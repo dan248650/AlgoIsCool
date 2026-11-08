@@ -134,19 +134,45 @@ export class SceneRenderer {
             this._applyActiveTabClasses();
 
             // 2) Структуры
+            // Порядок внутри окна задаётся wData.structureNames —
+            // это JSON-массив, порядок attach сохраняется. Object.entries
+            // (snapshot.structures) идёт по алфавиту (Flask jsonify
+            // сортирует ключи), поэтому для создания div-ов в правильном
+            // порядке используем structureNames.
             const created = [];
+            const handled = new Set();
+
+            // 2.1) Сначала — структуры, привязанные к окнам,
+            // в порядке structureNames каждого окна.
+            for (const [wid, wData] of Object.entries(snapshot.windows || {})) {
+                const wr = this.windows.get(wid);
+                if (!wr) continue;
+                const names = Array.isArray(wData.structureNames) ? wData.structureNames : [];
+                for (const name of names) {
+                    const frag = snapshot.structures[name];
+                    if (!frag || handled.has(name)) continue;
+                    handled.add(name);
+
+                    const RendererClass = RENDERER_BY_TYPE[frag.type];
+                    if (!RendererClass) continue;
+
+                    const host = wr.ensureStructureHost(name);
+                    const r = new RendererClass(host);
+                    r.updateSettings(this.settings);
+                    r.setZoomEnabled(this.activeTab !== 'all');
+                    this.renderers.set(name, r);
+                    r.applySnapshot(frag);
+                    created.push({ name, r });
+                }
+            }
+
+            // 2.2) Оставшиеся — структуры без привязки к окну (в hidden host).
             for (const [name, frag] of Object.entries(snapshot.structures)) {
+                if (handled.has(name)) continue;
                 const RendererClass = RENDERER_BY_TYPE[frag.type];
                 if (!RendererClass) continue;
 
-                const wid = this.windowByStructure.get(name);
-                let host;
-                if (wid && this.windows.has(wid)) {
-                    host = this.windows.get(wid).ensureStructureHost(name);
-                } else {
-                    host = this._createHiddenHost();
-                }
-
+                const host = this._createHiddenHost();
                 const r = new RendererClass(host);
                 r.updateSettings(this.settings);
                 r.setZoomEnabled(this.activeTab !== 'all');

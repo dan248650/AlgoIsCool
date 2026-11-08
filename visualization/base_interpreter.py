@@ -715,13 +715,8 @@ class BaseInterpreter:
         #   * строкой-выражением («input_array», «my_nodes») — от python_to_low,
         #     если пользователь передал переменную в конструктор;
         #   * dict-ом со строковыми значениями (для графа) — прошерстим значения.
-        if isinstance(data, str):
-            data = self._evaluate_expression(data, state)
-        elif isinstance(data, dict):
-            data = {
-                k: (self._evaluate_expression(v, state) if isinstance(v, str) else v)
-                for k, v in data.items()
-            }
+
+        data = self._resolve_data(data, state, structure_name=name)
 
         structure = create_structure(type_name, data, name=name)
         self.structures[name] = structure
@@ -731,6 +726,30 @@ class BaseInterpreter:
         )
         raw = structure.handle(initial_component, {})
         self._record_structure_commands(raw, commands)
+
+    def _resolve_data(self, data, state, structure_name=None):
+        """
+        Рекурсивно обходит data и разрешает {'$expr': ...} через
+        _evaluate_expression. Всё остальное оставляет как есть.
+        Так литералы (layout='hierarchical') и числа не путаются
+        с именами переменных.
+        """
+        if isinstance(data, dict):
+            if '$expr' in data and len(data) == 1:
+                expr = data['$expr']
+                resolved = self._evaluate_expression(expr, state)
+                if isinstance(resolved, str) and resolved == expr:
+                    raise ValueError(
+                        f"Structure '{structure_name}': переменная '{expr}' "
+                        f"не найдена в state. Доступные: "
+                        f"{sorted(k for k in state.keys() if not k.startswith('_'))}"
+                    )
+                return resolved
+            return {k: self._resolve_data(v, state, structure_name)
+                    for k, v in data.items()}
+        if isinstance(data, list):
+            return [self._resolve_data(v, state, structure_name) for v in data]
+        return data
 
     def _handle_create_window(self, command, state, settings, commands):
         window_id = command['window_id']

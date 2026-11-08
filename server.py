@@ -12,7 +12,9 @@ from data.algorithm import (Algorithm, add_linear_search, add_bubble_sort,
                             add_bst_build, add_bst_search, add_tree_bfs,
                             add_prefix_sums, add_suffix_sums,
                             add_nearest_smaller_left, add_boyer_moore_majority,
-                            add_trapping_rain_water,
+                            add_trapping_rain_water, add_prefix_function,
+                            add_z_function, add_manacher, add_kmp,
+                            add_boyer_moore,
                             )
 from data.category import init_categories
 
@@ -35,6 +37,9 @@ def create_app(config_class=Config):
                 template_folder='templates')
 
     app.config.from_object(config_class)
+
+    app.json.sort_keys = False
+
     logging.basicConfig(level=logging.INFO)
 
     db.init_app(app)
@@ -96,6 +101,11 @@ def init_algorithms():
     update_or_create(add_nearest_smaller_left)
     update_or_create(add_boyer_moore_majority)
     update_or_create(add_trapping_rain_water)
+    update_or_create(add_prefix_function)
+    update_or_create(add_z_function)
+    update_or_create(add_manacher)
+    update_or_create(add_kmp)
+    update_or_create(add_boyer_moore)
     db.session.commit()
 
 

@@ -258,12 +258,16 @@ class PythonToLowTransformer(ast.NodeVisitor):
         kwargs = {kw.arg: kw.value for kw in call_node.keywords}
 
         if type_name == 'vector':
-            # Vector(array) или Vector(array=...)
+            arg = None
             if args:
-                return self._expr_to_data(args[0])
-            if 'array' in kwargs:
-                return self._expr_to_data(kwargs['array'])
-            return []
+                arg = args[0]
+            elif 'array' in kwargs:
+                arg = kwargs['array']
+            if arg is None:
+                return []
+            # _expr_to_data вернёт литерал как есть (например, "abc"),
+            # выражение — в {'$expr': ...}. Различит их интерпретатор.
+            return self._expr_to_data(arg)
 
         if type_name == 'graph':
             # Graph(nodes=..., edges=..., directed=...)
@@ -286,16 +290,16 @@ class PythonToLowTransformer(ast.NodeVisitor):
 
     def _expr_to_data(self, node):
         """
-        Пытается вытащить литеральное значение (число, строка, список, словарь).
-        Если выражение не литеральное — возвращает строку-выражение, которую
-        интерпретатор вычислит во время выполнения.
+        Литералы возвращаются как есть. Выражения (имена переменных,
+        вызовы, арифметика) оборачиваются в {'$expr': ...}. Так интерпретатор
+        не путает 'hierarchical' (литерал) с 'input_array' (имя переменной).
         """
         if node is None:
             return None
         try:
             return ast.literal_eval(node)
         except (ValueError, SyntaxError):
-            return ast.unparse(node).strip()
+            return {"$expr": ast.unparse(node).strip()}
 
     def visit_AugAssign(self, node):
         op_str = self._op_to_str(node.op)
