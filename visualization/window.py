@@ -1,26 +1,20 @@
-"""
-Окно визуализации.
-
-На этом шаге окно содержит одну структуру. В будущем — список,
-когда понадобится объединять несколько структур в одном окне.
-"""
-
-
 class Window:
     def __init__(self, window_id: str, title: str = ""):
         self.id = window_id
         self.title = title or window_id
-        self.structure = None      # на этом шаге — одна структура
-        self.visible = True
+        self.structures = []       # список структур, порядок задаёт порядок отображения
+        self.visible = False
 
     def add_structure(self, structure):
         """Прикрепить структуру к окну. Структура запоминает окно у себя."""
-        self.remove_structure()
-        structure.attach_to(self)
+        structure.window = self
+        self.structures.append(structure)
 
-    def remove_structure(self):
-        if self.structure is not None:
-            self.structure.detach()
+    def remove_structure(self, structure):
+        if structure in self.structures:
+            self.structures.remove(structure)
+        if structure.window is self:
+            structure.window = None
 
     def show(self):
         self.visible = True
@@ -29,15 +23,18 @@ class Window:
         self.visible = False
 
     def clear(self):
-        self.structure = None
+        for s in self.structures:
+            if s.window is self:
+                s.window = None
+        self.structures = []
 
     def is_visible(self) -> bool:
-        return self.visible and self.structure is not None
+        return self.visible and len(self.structures) > 0
 
     def build_snapshot_dict(self):
         return {
             'id': self.id,
             'title': self.title,
             'visible': self.visible,
-            'structureName': self.structure.name if self.structure else None,
+            'structureNames': [s.name for s in self.structures],
         }

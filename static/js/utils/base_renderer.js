@@ -19,6 +19,10 @@ export class BaseRenderer {
         this.offsetX = 0;
         this.offsetY = 0;
 
+        // Локальный множитель zoom (Alt+wheel). По умолчанию 1.
+        // Итоговый размер = settings.elementSize * localZoom.
+        this.localZoom = 1.0;
+
         // Трансформация вьюпорта (single-режим)
         this._userTransformed = false;
         this.zoomEnabled = true;
@@ -33,7 +37,18 @@ export class BaseRenderer {
         this.onLayoutChanged = null;
 
         this.initContainer();
-        this._bindViewEvents();
+
+        // Bound-методы создаём в конструкторе, даже если слушатели
+        // навешиваются не здесь (глобальные события — на SceneRenderer,
+        // а эти методы вызываются им же при alt+pan / wheel).
+        this._onWheelBound = this._onWheel.bind(this);
+        this._onMouseDownBound = this._onMouseDown.bind(this);
+        this._onMouseMoveBound = this._onMouseMove.bind(this);
+        this._onMouseUpBound = this._onMouseUp.bind(this);
+        this._onDblClickBound = this._onDblClick.bind(this);
+        this._onTouchStartBound = this._onTouchStart.bind(this);
+        this._onTouchMoveBound = this._onTouchMove.bind(this);
+        this._onTouchEndBound = this._onTouchEnd.bind(this);
 
         // Наблюдаем за самим контейнером, а не за окном: размер
         // контейнера может меняться без события window.resize
@@ -60,7 +75,7 @@ export class BaseRenderer {
         if (this.elements.size === 0) return;
 
         const containerRect = this.container.getBoundingClientRect();
-        const targetSize = this.settings.elementSize;
+        const targetSize = this._getEffectiveSize();
         this.scale = targetSize / this.baseElementSize;
 
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -133,6 +148,10 @@ export class BaseRenderer {
         return this._contentHeight || 0;
     }
 
+    _getEffectiveSize() {
+        return this.settings.elementSize * (this.localZoom || 1);
+    }
+
     // Общий шаблон для сценариев, меняющих геометрию контейнера:
     //   1. отключаем transition;
     //   2. применяем мутатор (смена классов, перенос DOM, и т.п.);
@@ -160,10 +179,10 @@ export class BaseRenderer {
 
     // === Общие методы ===
     updateSettings(newSettings) {
+        if (!newSettings) return;
         if ('elementSize' in newSettings) {
             this.settings.elementSize = newSettings.elementSize;
             this.updateLayout();
-            this._onSettingsChanged();
         }
         if ('speedFactor' in newSettings) {
             this.settings.speedFactor = newSettings.speedFactor;
@@ -230,27 +249,6 @@ export class BaseRenderer {
 
     // ---------- Трансформация вьюпорта (single-режим) ----------
 
-    _bindViewEvents() {
-        this._onWheelBound = this._onWheel.bind(this);
-        this._onMouseDownBound = this._onMouseDown.bind(this);
-        this._onMouseMoveBound = this._onMouseMove.bind(this);
-        this._onMouseUpBound = this._onMouseUp.bind(this);
-        this._onDblClickBound = this._onDblClick.bind(this);
-
-        this._onTouchStartBound = this._onTouchStart.bind(this);
-        this._onTouchMoveBound = this._onTouchMove.bind(this);
-        this._onTouchEndBound = this._onTouchEnd.bind(this);
-
-        this.container.addEventListener('wheel', this._onWheelBound, { passive: false });
-        this.container.addEventListener('mousedown', this._onMouseDownBound);
-        this.container.addEventListener('dblclick', this._onDblClickBound);
-
-        this.container.addEventListener('touchstart', this._onTouchStartBound, { passive: false });
-        this.container.addEventListener('touchmove', this._onTouchMoveBound, { passive: false });
-        this.container.addEventListener('touchend', this._onTouchEndBound);
-        this.container.addEventListener('touchcancel', this._onTouchEndBound);
-    }
-
     _onWheel(e) {
         if (!this.zoomEnabled) return;
         e.preventDefault();
@@ -259,9 +257,8 @@ export class BaseRenderer {
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
 
-        const oldSize = this.settings.elementSize;
+        const oldSize = this._getEffectiveSize();
         const oldScale = oldSize / this.baseElementSize;
-        // Мышь указывает на ЦЕНТР виртуального элемента в world-координатах.
         const wx = (mx - this.offsetX - oldSize / 2) / oldScale;
         const wy = (my - this.offsetY - oldSize / 2) / oldScale;
 
@@ -271,7 +268,10 @@ export class BaseRenderer {
         newSize = Math.max(15, Math.min(250, newSize));
         if (Math.abs(newSize - oldSize) < 0.01) return;
 
-        this.settings.elementSize = newSize;
+        // Локальный zoom: меняется только localZoom этой структуры.
+        // settings.elementSize не трогаем — слайдер не двигается,
+        // глобальный zoom не задет.
+        this.localZoom = newSize / this.settings.elementSize;
         this._userTransformed = true;
 
         const newScale = newSize / this.baseElementSize;
@@ -280,8 +280,6 @@ export class BaseRenderer {
 
         this._onSettingsChanged();
         this.updateLayout();
-
-        if (this.onSizeChanged) this.onSizeChanged(newSize);
     }
 
     _onMouseDown(e) {
@@ -315,6 +313,8 @@ export class BaseRenderer {
         this.container.style.cursor = this.zoomEnabled ? 'grab' : '';
         document.removeEventListener('mousemove', this._onMouseMoveBound);
         document.removeEventListener('mouseup', this._onMouseUpBound);
+        this._onSettingsChanged();
+        this.updateLayout();
     }
 
     _onTouchStart(e) {
@@ -328,7 +328,7 @@ export class BaseRenderer {
                 offsetX: this.offsetX, offsetY: this.offsetY,
             };
             this._touchMoved = false;
-            this.container.style.setProperty('--lt-speed', '0.1s');
+            this.container.style.setProperty('--lt-speed', '0.0s');
         } else if (e.touches.length === 2) {
             e.preventDefault();
             this._dragging = false;
@@ -344,7 +344,7 @@ export class BaseRenderer {
                 mx: (t1.clientX + t2.clientX) / 2 - rect.left,
                 my: (t1.clientY + t2.clientY) / 2 - rect.top,
             };
-            this.container.style.setProperty('--lt-speed', '0.1s');
+            this.container.style.setProperty('--lt-speed', '0.0s');
         }
     }
 
@@ -424,9 +424,8 @@ export class BaseRenderer {
     _onDblClick(e) {
         if (!this.zoomEnabled) return;
         e.preventDefault();
-        // Двойной клик только центрирует сцену. Размер элемента
-        // (масштаб) не сбрасывается — им управляют слайдер/колесо.
         this._userTransformed = false;
+        this.localZoom = 1.0;
         this.updateLayout();
     }
 

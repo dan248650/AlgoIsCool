@@ -31,11 +31,12 @@ class Structure(ABC):
 
     def attach_to(self, window):
         self.window = window
-        window.structure = self
+        if self not in self.window.structures:
+            self.window.structures.append(self)
 
     def detach(self):
         if self.window is not None:
-            self.window.structure = None
+            self.window.remove_structure(self)
             self.window = None
 
     def is_visible(self) -> bool:

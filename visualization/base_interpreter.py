@@ -756,6 +756,8 @@ class BaseInterpreter:
             raise ValueError(f"Window '{window_id}' not found")
 
         window.add_structure(structure)
+        if not window.visible:
+            window.show()
         self._record_scene_command({
             'component': 'add_structure_to_window',
             'window': window_id,

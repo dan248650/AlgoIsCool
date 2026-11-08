@@ -42,14 +42,15 @@ export class ArrayRenderer extends BaseRenderer {
     }
 
     _onSettingsChanged() {
+        const size = this._getEffectiveSize();
         for (const element of this.elements.values()) {
-            element.style.width = `${this.settings.elementSize}px`;
-            element.style.height = `${this.settings.elementSize}px`;
-            element.style.fontSize = `${Math.max(8, this.settings.elementSize / 3)}px`;
+            element.style.width = `${size}px`;
+            element.style.height = `${size}px`;
+            element.style.fontSize = `${Math.max(8, size / 3)}px`;
             const valueDiv = element.querySelector('.value');
-            if (valueDiv) valueDiv.style.fontSize = `${Math.max(8, this.settings.elementSize / 3)}px`;
+            if (valueDiv) valueDiv.style.fontSize = `${Math.max(8, size / 3)}px`;
             const indexDiv = element.querySelector('.index');
-            if (indexDiv) indexDiv.style.fontSize = `${Math.max(6, this.settings.elementSize / 4)}px`;
+            if (indexDiv) indexDiv.style.fontSize = `${Math.max(6, size / 4)}px`;
         }
     }
 
@@ -237,18 +238,19 @@ export class ArrayRenderer extends BaseRenderer {
 
     _createDomElement(elemData, baseX, baseY) {
         const element = document.createElement('div');
+        const size = this._getEffectiveSize();
         element.id = elemData.id;
         element.className = 'visualization-element';
         element.style.position = 'absolute';
-        element.style.width = `${this.settings.elementSize}px`;
-        element.style.height = `${this.settings.elementSize}px`;
+        element.style.width = `${size}px`;
+        element.style.height = `${size}px`;
         element.style.borderRadius = '8px';
         element.style.backgroundColor = 'rgba(224, 224, 224, 0.5)';
         element.style.display = 'flex';
         element.style.flexDirection = 'column';
         element.style.alignItems = 'center';
         element.style.justifyContent = 'center';
-        element.style.fontSize = `${Math.max(8, this.settings.elementSize / 3)}px`;
+        element.style.fontSize = `${Math.max(8, size / 3)}px`;
         element.style.fontWeight = 'bold';
         element.style.color = '#333';
         element.style.transition = 'none';
@@ -264,7 +266,7 @@ export class ArrayRenderer extends BaseRenderer {
             ${this.settings.showIndices ? `<div class="index">${element.id.split('_')[1]}</div>` : ''}
         `;
         const indexDiv = element.querySelector('.index');
-        if (indexDiv) indexDiv.style.fontSize = `${Math.max(6, this.settings.elementSize / 4)}px`;
+        if (indexDiv) indexDiv.style.fontSize = `${Math.max(6, size / 4)}px`;
         return element;
     }
 

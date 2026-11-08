@@ -197,7 +197,6 @@ body::after {
 .visualization-element .index {
     font-size: 10px;
     opacity: 0.7;
-    margin-top: 4px;
 }
 
 /* Панель управления */
@@ -486,7 +485,7 @@ body::after {
 .visualization-area.scene-container {
     display: block;
     overflow-y: auto;
-    padding: 16px;
+    padding: 0px;
 }
 
 .scene-window {
@@ -508,7 +507,7 @@ body::after {
 
 .scene-window-content {
     position: relative;
-    min-height: 220px;
+    min-height: 80px;
     padding: 10px;
 }
 
@@ -587,6 +586,17 @@ body::after {
 }
 
 /* === Режим "Все окна" === */
+.scene-container.mode-all {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.scene-container.mode-all .scene-inner {
+    display: block;
+    width: 100%;
+    min-height: 100%;
+}
+
 .scene-container.mode-all .scene-window {
     display: flex;
     flex-direction: column;
@@ -604,8 +614,15 @@ body::after {
     align-items: stretch;
     justify-content: flex-start;
     padding: 0;
-    overflow: auto;
+    overflow: hidden;
 }
+
+.scene-container.mode-single .scene-inner {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
 
 .scene-container.mode-single .scene-window {
     display: none;
@@ -614,30 +631,34 @@ body::after {
 .scene-container.mode-single .scene-window.active-window {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
+    width: 100%;
     background: transparent;
     border: none;
     border-radius: 0;
-    margin: 0;
     padding: 0;
+    overflow: visible;
 }
 
 .scene-container.mode-single .scene-window.active-window .scene-window-header {
     display: none;
 }
 
+.scene-container.mode-single .scene-window.active-window .scene-window-structure {
+    width: 100%;
+    /* Высота задаётся inline через _updateWindowHeights. */
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
 .scene-container.mode-single .scene-window.active-window .scene-window-content {
-    flex: 1;
-    min-height: 0;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     padding: 10px;
     background: transparent;
     border-radius: 0;
-}
-
-.scene-container.mode-single .scene-window-content {
-    cursor: grab;
+    min-height: 0;
+    /* Высота задаётся inline через _updateWindowHeights. */
 }
 
 .scene-container.mode-single .scene-window-content:active {
@@ -647,4 +668,36 @@ body::after {
 .no-transition,
 .no-transition * {
     transition: none !important;
+}
+
+.scene-window-structure {
+    position: relative;
+    width: 100%;
+    /* Высота задаётся inline через WindowRenderer.setStructureHeight */
+    box-sizing: border-box;
+}
+
+/* Info-tooltip: появляется при hover + клавиша I. */
+.scene-info-tooltip {
+    position: fixed;
+    display: none;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: monospace;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    max-width: 240px;
+    word-break: break-word;
+}
+
+/* Обёртка для глобального pan. */
+.scene-inner {
+    transform-origin: 0 0;
+    will-change: transform;
+    width: 100%;
 }

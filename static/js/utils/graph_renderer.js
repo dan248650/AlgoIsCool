@@ -6,6 +6,14 @@ export class GraphRenderer extends BaseRenderer {
         this.edges = new Map();
         this.canvas = null;
         this.ctx = null;
+
+        this._lastCanvasLeft = null;
+        this._lastCanvasTop = null;
+        this._lastCanvasW = null;
+        this._lastCanvasH = null;
+        this._canvasOriginX = 0;
+        this._canvasOriginY = 0;
+
         this.initCanvas();
         window.addEventListener('resize', () => this.updateLayout());
     }
@@ -13,10 +21,10 @@ export class GraphRenderer extends BaseRenderer {
     initCanvas() {
         this.canvas = document.createElement('canvas');
         this.canvas.style.position = 'absolute';
-        this.canvas.style.top = '0';
-        this.canvas.style.left = '0';
-        this.canvas.style.width = '100%';
-        this.canvas.style.height = '100%';
+        this.canvas.style.left = '0px';
+        this.canvas.style.top = '0px';
+        this.canvas.style.width = '0px';
+        this.canvas.style.height = '0px';
         this.canvas.style.pointerEvents = 'none';
         if (!this.container.style.position) {
             this.container.style.position = 'relative';
@@ -25,15 +33,90 @@ export class GraphRenderer extends BaseRenderer {
         this.ctx = this.canvas.getContext('2d');
     }
 
-    resizeCanvas() {
-        const rect = this.container.getBoundingClientRect();
-        if (this.canvas.width === rect.width && this.canvas.height === rect.height) {
-            // Размер не изменился — синхронизируем только рёбра.
-            this.redrawEdges();
-            return;
+    _computeCanvasBounds() {
+        // bbox элементов в системе координат structure (container).
+        // el.style.left/top — это позиции в coordinate space, в которой
+        // их расставил BaseRenderer.updateLayout.
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const el of this.elements.values()) {
+            const x = parseFloat(el.style.left) || 0;
+            const y = parseFloat(el.style.top) || 0;
+            const w = el.offsetWidth;
+            const h = el.offsetHeight;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x + w > maxX) maxX = x + w;
+            if (y + h > maxY) maxY = y + h;
         }
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
+        if (minX === Infinity) {
+            const cw = this.container.clientWidth;
+            const ch = this.container.clientHeight;
+            return { left: 0, top: 0, width: cw, height: ch };
+        }
+
+        // Расширяем минимум до bbox structure (0..clientW/H),
+        // чтобы canvas всегда покрывал всю structure.
+        const structW = this.container.clientWidth;
+        const structH = this.container.clientHeight;
+        minX = Math.min(minX, 0);
+        minY = Math.min(minY, 0);
+        maxX = Math.max(maxX, structW);
+        maxY = Math.max(maxY, structH);
+
+        // Запас на рёбра (толщина линии, свечение) и небольшую погрешность.
+        const pad = 20;
+        return {
+            left: minX - pad,
+            top: minY - pad,
+            width: (maxX - minX) + pad * 2,
+            height: (maxY - minY) + pad * 2,
+        };
+    }
+
+    resizeCanvas() {
+        const bounds = this._computeCanvasBounds();
+
+        // CSS-позиция и размер (в системе structure).
+        const newLeft = Math.floor(bounds.left);
+        const newTop = Math.floor(bounds.top);
+        const newW = Math.ceil(bounds.width);
+        const newH = Math.ceil(bounds.height);
+
+        // Обновляем CSS, только если реально изменилось —
+        // иначе браузер будет считать layout каждый кадр.
+        if (this._lastCanvasLeft !== newLeft) {
+            this.canvas.style.left = `${newLeft}px`;
+            this._lastCanvasLeft = newLeft;
+        }
+        if (this._lastCanvasTop !== newTop) {
+            this.canvas.style.top = `${newTop}px`;
+            this._lastCanvasTop = newTop;
+        }
+        if (this._lastCanvasW !== newW) {
+            this.canvas.style.width = `${newW}px`;
+            this._lastCanvasW = newW;
+        }
+        if (this._lastCanvasH !== newH) {
+            this.canvas.style.height = `${newH}px`;
+            this._lastCanvasH = newH;
+        }
+
+        // Пиксельный размер — обязательно с DPR, иначе на retina мыло.
+        // ВАЖНО: canvas.width = X стирает буфер. Делаем только при
+        // реальном изменении размера (иначе рёбра мигают на каждом pan).
+        const dpr = window.devicePixelRatio || 1;
+        const targetPxW = Math.ceil(newW * dpr);
+        const targetPxH = Math.ceil(newH * dpr);
+        if (this.canvas.width !== targetPxW || this.canvas.height !== targetPxH) {
+            this.canvas.width = targetPxW;
+            this.canvas.height = targetPxH;
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Запоминаем origin — для redrawEdges.
+        this._canvasOriginX = newLeft;
+        this._canvasOriginY = newTop;
+
         this.redrawEdges();
         setTimeout(() => this.redrawEdges(), 200);
         setTimeout(() => this.redrawEdges(), 400);
@@ -49,19 +132,29 @@ export class GraphRenderer extends BaseRenderer {
 
     redrawEdges() {
         if (!this.ctx) return;
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        const containerRect = this.container.getBoundingClientRect();
+        // clearRect в CSS-координатах (ctx scaled на dpr, поэтому
+        // используем CSS-размеры, а не canvas.width/height).
+        const cssW = this.canvas.width / (window.devicePixelRatio || 1);
+        const cssH = this.canvas.height / (window.devicePixelRatio || 1);
+        this.ctx.clearRect(0, 0, cssW, cssH);
+
+        const originX = this._canvasOriginX || 0;
+        const originY = this._canvasOriginY || 0;
+        // Ориентир — structure (container). Позиция элемента в structure
+        // = el.style.left (то, что записал updateLayout). Позиция в canvas
+        // = (el.style.left − originX).
         for (const [key, edge] of this.edges.entries()) {
             const fromNode = this.elements.get(`node_${edge.from}`);
             const toNode = this.elements.get(`node_${edge.to}`);
             if (fromNode && toNode) {
-                const fromRect = fromNode.getBoundingClientRect();
-                const toRect = toNode.getBoundingClientRect();
-                // Координаты относительно контейнера
-                const x1 = fromRect.left + fromRect.width/2 - containerRect.left;
-                const y1 = fromRect.top + fromRect.height/2 - containerRect.top;
-                const x2 = toRect.left + toRect.width/2 - containerRect.left;
-                const y2 = toRect.top + toRect.height/2 - containerRect.top;
+                const fx = (parseFloat(fromNode.style.left) || 0) + fromNode.offsetWidth / 2;
+                const fy = (parseFloat(fromNode.style.top) || 0) + fromNode.offsetHeight / 2;
+                const tx = (parseFloat(toNode.style.left) || 0) + toNode.offsetWidth / 2;
+                const ty = (parseFloat(toNode.style.top) || 0) + toNode.offsetHeight / 2;
+                const x1 = fx - originX;
+                const y1 = fy - originY;
+                const x2 = tx - originX;
+                const y2 = ty - originY;
                 this.ctx.beginPath();
                 this.ctx.moveTo(x1, y1);
                 this.ctx.lineTo(x2, y2);
@@ -191,6 +284,7 @@ export class GraphRenderer extends BaseRenderer {
         }
 
         this.updateLayout();
+        setTimeout(() => this.redrawEdges(), 400);
     }
 
     clear() {
@@ -208,20 +302,21 @@ export class GraphRenderer extends BaseRenderer {
 
     _createNodeElement(node) {
         const element = document.createElement('div');
+        const size = this._getEffectiveSize();
         element.id = `node_${node.id}`;
         element.className = 'visualization-element';
         element.style.position = 'absolute';
-        element.style.width = `${this.settings.elementSize}px`;
-        element.style.height = `${this.settings.elementSize}px`;
+        element.style.width = `${size}px`;
+        element.style.height = `${size}px`;
         element.style.borderRadius = '50%';
         element.style.backgroundColor = 'rgba(224, 224, 224, 0.8)';
         element.style.display = 'flex';
         element.style.alignItems = 'center';
         element.style.justifyContent = 'center';
-        element.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
+        element.style.fontSize = `${Math.max(12, size / 3)}px`;
         element.style.fontWeight = 'bold';
         element.style.color = '#333';
-        element.style.transition = 'all 0.3s ease-in-out';
+        this._setTransition(element, 'all 0.3s ease-in-out');
         if (node.color) element.style.boxShadow = `0 0 14px 6px ${node.color}, 0 0 28px 12px ${node.color}`;
         else element.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         element.style.cursor = 'pointer';
@@ -314,12 +409,13 @@ export class GraphRenderer extends BaseRenderer {
     }
 
     _onSettingsChanged() {
+        const size = this._getEffectiveSize();
         for (const element of this.elements.values()) {
-            element.style.width = `${this.settings.elementSize}px`;
-            element.style.height = `${this.settings.elementSize}px`;
-            element.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
+            element.style.width = `${size}px`;
+            element.style.height = `${size}px`;
+            element.style.fontSize = `${Math.max(12, size / 3)}px`;
             const valueDiv = element.querySelector('.value');
-            if (valueDiv) valueDiv.style.fontSize = `${Math.max(12, this.settings.elementSize / 3)}px`;
+            if (valueDiv) valueDiv.style.fontSize = `${Math.max(12, size / 3)}px`;
         }
         this.redrawEdges();
     }
