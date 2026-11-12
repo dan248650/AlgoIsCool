@@ -1453,3 +1453,382 @@ def add_boyer_moore():
         definition_python=python_code,
         definition_mode='python',
     )
+
+
+def add_lis():
+    python_code = (
+        'w = Window("main")\n'
+        'arr = Vector(input_array)\n'
+        'dp = Vector([])\n'
+        'w.attach(arr)\n'
+        'w.attach(dp)\n'
+        'n = len(input_array)\n'
+        'for k in range(n):\n'
+        '    dp.append(1)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(0, n):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    dp.highlight(i, "yellow")\n'
+        '    wait(300)\n'
+        '    best = 0\n'
+        '    for j in range(0, i):\n'
+        '        arr.highlight(j, "orange")\n'
+        '        dp.highlight(j, "cyan")\n'
+        '        wait(200)\n'
+        '        if input_array[j] < input_array[i]:\n'
+        '            arr.highlight(j, "green")\n'
+        '            if dp.value_at(j) > best:\n'
+        '                best = dp.value_at(j)\n'
+        '        else:\n'
+        '            arr.highlight(j, "red")\n'
+        '        wait(200)\n'
+        '        arr.unhighlight(j)\n'
+        '        dp.unhighlight(j)\n'
+        '    dp.set(i, best + 1)\n'
+        '    dp.highlight(i, "green")\n'
+        '    arr.unhighlight(i)\n'
+        '    wait(300)\n'
+        '    dp.unhighlight(i)\n'
+    )
+    default_input = {"input_array": [10, 9, 2, 5, 3, 7, 27, 18]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="lis",
+        name="Longest Increasing Subsequence",
+        display_name="Наибольшая возрастающая подпоследовательность (LIS)",
+        category_id="search",
+        description_short="dp[i] = 1 + max(dp[j] : j<i, a[j]<a[i])",
+        description_full="Для каждого i проходим по всем j < i, где input_array[j] < input_array[i]. dp[i] — наибольшая длина возрастающей подпоследовательности, заканчивающейся на i. Ответ = max(dp).",
+        complexity="O(n²)",
+        icon="LIS",
+        order_index=110,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {"type": "array", "constraints": {
+                "min_length": 5, "max_length": 9, "min_value": 1, "max_value": 30
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_coin_change():
+    python_code = (
+        'w = Window("main")\n'
+        'coins = Vector(input_coins)\n'
+        'dp = Vector([])\n'
+        'w.attach(coins)\n'
+        'w.attach(dp)\n'
+        'n = len(input_coins)\n'
+        'for k in range(amount + 1):\n'
+        '    if k == 0:\n'
+        '        dp.append(0)\n'
+        '    else:\n'
+        '        dp.append(-1)\n'
+        'wait(500)\n'
+        '\n'
+        'for s in range(1, amount + 1):\n'
+        '    dp.highlight(s, "yellow")\n'
+        '    wait(300)\n'
+        '    best = -1\n'
+        '    for k in range(0, n):\n'
+        '        c = input_coins[k]\n'
+        '        coins.highlight(k, "orange")\n'
+        '        wait(150)\n'
+        '        if c <= s:\n'
+        '            if dp.value_at(s - c) != -1:\n'
+        '                cand = dp.value_at(s - c) + 1\n'
+        '                dp.highlight(s - c, "cyan")\n'
+        '                wait(200)\n'
+        '                if best == -1 or cand < best:\n'
+        '                    best = cand\n'
+        '                    dp.highlight(s - c, "green")\n'
+        '                wait(150)\n'
+        '                dp.highlight(s - c, "yellow")\n'
+        '        else:\n'
+        '            coins.highlight(k, "red")\n'
+        '        wait(150)\n'
+        '        coins.unhighlight(k)\n'
+        '    if best != -1:\n'
+        '        dp.set(s, best)\n'
+        '        dp.highlight(s, "green")\n'
+        '    else:\n'
+        '        dp.highlight(s, "red")\n'
+        '    wait(300)\n'
+        '    dp.unhighlight(s)\n'
+    )
+    default_input = {"input_coins": [1, 2, 5], "amount": 11}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="coin-change",
+        name="Coin change",
+        display_name="Размен монет (минимум монет)",
+        category_id="search",
+        description_short="dp[s] = min(dp[s-c]+1 : c <= s, dp[s-c] != -1)",
+        description_full="dp[s] — минимальное число монет для суммы s. Для каждой суммы перебираем все монеты c: если dp[s-c] достижима, кандидат = dp[s-c]+1. Ответ = dp[amount].",
+        complexity="O(amount · n)",
+        icon="coin",
+        order_index=111,
+        default_input_data=default_input,
+        input_schema={
+            "input_coins": {"type": "array", "constraints": {
+                "min_length": 2, "max_length": 4, "min_value": 1, "max_value": 10,
+                "label": "Монеты"
+            }},
+            "amount": {"type": "number", "constraints": {
+                "min": 5, "max": 15, "nonnegative": True, "label": "Сумма"
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_house_robber():
+    python_code = (
+        'w = Window("main")\n'
+        'arr = Vector(input_array)\n'
+        'dp = Vector([])\n'
+        'w.attach(arr)\n'
+        'w.attach(dp)\n'
+        'n = len(input_array)\n'
+        'for k in range(n):\n'
+        '    dp.append(0)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(0, n):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    if i == 0:\n'
+        '        dp.set(0, input_array[0])\n'
+        '        dp.highlight(0, "green")\n'
+        '        wait(300)\n'
+        '        dp.unhighlight(0)\n'
+        '        arr.unhighlight(0)\n'
+        '        continue\n'
+        '    if i == 1:\n'
+        '        if input_array[0] > input_array[1]:\n'
+        '            dp.set(1, input_array[0])\n'
+        '        else:\n'
+        '            dp.set(1, input_array[1])\n'
+        '        dp.highlight(1, "green")\n'
+        '        wait(300)\n'
+        '        dp.unhighlight(1)\n'
+        '        arr.unhighlight(1)\n'
+        '        continue\n'
+        '    skip = dp.value_at(i - 1)\n'
+        '    take = dp.value_at(i - 2) + input_array[i]\n'
+        '    dp.highlight(i - 1, "cyan")\n'
+        '    dp.highlight(i - 2, "orange")\n'
+        '    wait(400)\n'
+        '    if skip > take:\n'
+        '        dp.set(i, skip)\n'
+        '        dp.highlight(i - 1, "green")\n'
+        '    else:\n'
+        '        dp.set(i, take)\n'
+        '        dp.highlight(i - 2, "green")\n'
+        '    dp.highlight(i, "green")\n'
+        '    wait(300)\n'
+        '    dp.unhighlight(i - 1)\n'
+        '    dp.unhighlight(i - 2)\n'
+        '    dp.unhighlight(i)\n'
+        '    arr.unhighlight(i)\n'
+    )
+    default_input = {"input_array": [2, 7, 9, 3, 1]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="house-robber",
+        name="House robber",
+        display_name="Ограбление домов",
+        category_id="search",
+        description_short="dp[i] = max(dp[i-1], dp[i-2] + a[i])",
+        description_full="Каждый дом содержит деньги. Нельзя грабить два соседних дома. dp[i] = максимум из «пропустить i-й» (dp[i-1]) и «взять i-й» (dp[i-2] + a[i]).",
+        complexity="O(n)",
+        icon="🏠",
+        order_index=112,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {"type": "array", "constraints": {
+                "min_length": 4, "max_length": 8, "min_value": 1, "max_value": 20
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_max_product_subarray():
+    python_code = (
+        'w = Window("main")\n'
+        'arr = Vector(input_array)\n'
+        'max_dp = Vector([])\n'
+        'min_dp = Vector([])\n'
+        'w.attach(arr)\n'
+        'w.attach(max_dp)\n'
+        'w.attach(min_dp)\n'
+        'n = len(input_array)\n'
+        'for k in range(n):\n'
+        '    max_dp.append(0)\n'
+        '    min_dp.append(0)\n'
+        'wait(500)\n'
+        '\n'
+        'max_dp.set(0, input_array[0])\n'
+        'min_dp.set(0, input_array[0])\n'
+        'best = input_array[0]\n'
+        'arr.highlight(0, "yellow")\n'
+        'max_dp.highlight(0, "green")\n'
+        'min_dp.highlight(0, "green")\n'
+        'wait(400)\n'
+        'arr.unhighlight(0)\n'
+        'max_dp.unhighlight(0)\n'
+        'min_dp.unhighlight(0)\n'
+        '\n'
+        'for i in range(1, n):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    max_dp.highlight(i - 1, "cyan")\n'
+        '    min_dp.highlight(i - 1, "cyan")\n'
+        '    wait(300)\n'
+        '    a = max_dp.value_at(i - 1) * input_array[i]\n'
+        '    b = min_dp.value_at(i - 1) * input_array[i]\n'
+        '    c = input_array[i]\n'
+        '    hi = a\n'
+        '    if b > hi:\n'
+        '        hi = b\n'
+        '    if c > hi:\n'
+        '        hi = c\n'
+        '    lo = a\n'
+        '    if b < lo:\n'
+        '        lo = b\n'
+        '    if c < lo:\n'
+        '        lo = c\n'
+        '    max_dp.set(i, hi)\n'
+        '    min_dp.set(i, lo)\n'
+        '    if hi > best:\n'
+        '        best = hi\n'
+        '    max_dp.highlight(i, "green")\n'
+        '    min_dp.highlight(i, "green")\n'
+        '    wait(400)\n'
+        '    max_dp.unhighlight(i - 1)\n'
+        '    min_dp.unhighlight(i - 1)\n'
+        '    max_dp.unhighlight(i)\n'
+        '    min_dp.unhighlight(i)\n'
+        '    arr.unhighlight(i)\n'
+    )
+    default_input = {"input_array": [2, 3, -2, 4, -1, 2, -3]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="max-product-subarray",
+        name="Maximum product subarray",
+        display_name="Максимальное произведение подмассива",
+        category_id="search",
+        description_short="Два состояния max/min из-за смены знака при отрицательных",
+        description_full="Ведём два массива: max_dp[i] — максимальное произведение подмассива, заканчивающегося на i, min_dp[i] — минимальное (может стать максимальным при умножении на отрицательное). hi = max(max_dp[i-1]*a[i], min_dp[i-1]*a[i], a[i]), lo = min(...).",
+        complexity="O(n)",
+        icon="×",
+        order_index=113,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {"type": "array", "constraints": {
+                "min_length": 4, "max_length": 8, "min_value": -5, "max_value": 5,
+                "has_negatives": True
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_jump_game():
+    python_code = (
+        'w = Window("main")\n'
+        'arr = Vector(input_array)\n'
+        'dp = Vector([])\n'
+        'w.attach(arr)\n'
+        'w.attach(dp)\n'
+        'n = len(input_array)\n'
+        'for k in range(n):\n'
+        '    dp.append(-1)\n'
+        'wait(500)\n'
+        '\n'
+        'dp.set(0, 0)\n'
+        'arr.highlight(0, "yellow")\n'
+        'dp.highlight(0, "green")\n'
+        'wait(400)\n'
+        'arr.unhighlight(0)\n'
+        'dp.unhighlight(0)\n'
+        '\n'
+        'for i in range(1, n):\n'
+        '    arr.highlight(i, "yellow")\n'
+        '    wait(300)\n'
+        '    best = -1\n'
+        '    for j in range(0, i):\n'
+        '        if dp.value_at(j) != -1:\n'
+        '            reach = j + input_array[j]\n'
+        '            arr.highlight(j, "cyan")\n'
+        '            dp.highlight(j, "cyan")\n'
+        '            wait(200)\n'
+        '            if reach >= i:\n'
+        '                cand = dp.value_at(j) + 1\n'
+        '                arr.highlight(j, "green")\n'
+        '                dp.highlight(j, "green")\n'
+        '                wait(150)\n'
+        '                if best == -1 or cand < best:\n'
+        '                    best = cand\n'
+        '                arr.highlight(j, "cyan")\n'
+        '                dp.highlight(j, "cyan")\n'
+        '            else:\n'
+        '                arr.highlight(j, "red")\n'
+        '            wait(200)\n'
+        '            arr.unhighlight(j)\n'
+        '            dp.unhighlight(j)\n'
+        '    if best != -1:\n'
+        '        dp.set(i, best)\n'
+        '        dp.highlight(i, "green")\n'
+        '    else:\n'
+        '        dp.highlight(i, "red")\n'
+        '    wait(300)\n'
+        '    dp.unhighlight(i)\n'
+        '    arr.unhighlight(i)\n'
+    )
+    default_input = {"input_array": [2, 3, 1, 1, 4]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="jump-game",
+        name="Jump game II",
+        display_name="Минимум прыжков до конца",
+        category_id="search",
+        description_short="dp[i] = min(dp[j]+1 : j + a[j] >= i)",
+        description_full="dp[i] — минимум прыжков, чтобы достичь позиции i. Из j можно допрыгнуть до i, если j + input_array[j] >= i. Ответ = dp[n-1] (или -1, если недостижимо).",
+        complexity="O(n²)",
+        icon="↑",
+        order_index=114,
+        default_input_data=default_input,
+        input_schema={
+            "input_array": {"type": "array", "constraints": {
+                "min_length": 4, "max_length": 8, "min_value": 1, "max_value": 4
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )

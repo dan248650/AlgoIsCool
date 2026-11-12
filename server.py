@@ -7,15 +7,32 @@ from config import Config
 
 # Импортируем модели и БД
 from data.db import db
-from data.algorithm import (Algorithm, add_linear_search, add_bubble_sort,
-                            add_bfs, add_dfs, add_kadane,
-                            add_bst_build, add_bst_search, add_tree_bfs,
-                            add_prefix_sums, add_suffix_sums,
-                            add_nearest_smaller_left, add_boyer_moore_majority,
-                            add_trapping_rain_water, add_prefix_function,
-                            add_z_function, add_manacher, add_kmp,
-                            add_boyer_moore,
-                            )
+from data.algorithm import (
+    Algorithm,
+    add_linear_search,
+    add_bubble_sort,
+    add_bfs,
+    add_dfs,
+    add_kadane,
+    add_bst_build,
+    add_bst_search,
+    add_tree_bfs,
+    add_prefix_sums,
+    add_suffix_sums,
+    add_nearest_smaller_left,
+    add_boyer_moore_majority,
+    add_trapping_rain_water,
+    add_prefix_function,
+    add_z_function,
+    add_manacher,
+    add_kmp,
+    add_boyer_moore,
+    add_lis,
+    add_coin_change,
+    add_house_robber,
+    add_max_product_subarray,
+    add_jump_game,
+)
 from data.category import init_categories
 
 # Импортируем маршруты
@@ -106,6 +123,11 @@ def init_algorithms():
     update_or_create(add_manacher)
     update_or_create(add_kmp)
     update_or_create(add_boyer_moore)
+    update_or_create(add_lis)
+    update_or_create(add_coin_change)
+    update_or_create(add_house_robber)
+    update_or_create(add_max_product_subarray)
+    update_or_create(add_jump_game)
     db.session.commit()
 
 

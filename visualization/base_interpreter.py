@@ -20,6 +20,7 @@ class BaseInterpreter:
         self.functions = {
             'str': lambda x: str(x),
             'int': lambda x: int(x),
+            'abs': lambda x: abs(x),
             'length': lambda x: len(x),
             'range': lambda *args: list(range(*args)),
             'increment': lambda x: x + 1,
@@ -27,6 +28,8 @@ class BaseInterpreter:
             'swap': self._swap_array_elements,
             'min': lambda *args: min(*args),
             'max': lambda *args: max(*args),
+            'max_or': lambda lst, default: max(lst) if lst else default,
+            'min_or': lambda lst, default: min(lst) if lst else default,
         }
         self._base_element_size = 40
         self._command_counter = 0
