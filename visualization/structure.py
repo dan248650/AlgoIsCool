@@ -118,6 +118,8 @@ class VectorStructure(Structure):
             return self.remove(params['index'])
         if component == 'swap':
             return self._swap(params['i'], params['j'])
+        if component == 'reverse':
+            return self.reverse()
         raise ValueError(f"Unknown vector component: {component}")
 
     # --- общие методы (highlight / unhighlight / set_opacity) ---
@@ -293,6 +295,20 @@ class VectorStructure(Structure):
                 'element2_id': f"elem_{j}",
                 'duration': 500,
             },
+        })]
+
+    def reverse(self):
+        self.array.reverse()
+        # Пересобрать _colors: индексы меняются по (n-1-i)
+        n = len(self.array)
+        new_colors = {}
+        for i, c in self._colors.items():
+            new_colors[n - 1 - i] = c
+        self._colors = new_colors
+        self._styles = {}
+        return [self._tag({
+            'component': 'replace_elements',
+            'params': self.build_snapshot_dict(),
         })]
 
     # --- снапшот ---
@@ -852,12 +868,210 @@ class TreeStructure(GraphStructure):
         }
 
 
+# ======================= ТАБЛИЦА =======================
+
+class TableStructure(Structure):
+    type_name = 'table'
+
+    def __init__(self, data):
+        super().__init__()
+        # data может быть:
+        #   * {'rows': N, 'cols': M, 'default': X} — создание пустой таблицы
+        #   * {'matrix': [[...], ...]} — от python_to_low
+        #   * [[...], ...] — сырой список списков
+        #   * "1,2;3,4" — строковый литерал
+        if isinstance(data, dict) and 'rows' in data:
+            rows = int(data['rows'])
+            cols = int(data.get('cols', rows))
+            default = data.get('default', 0)
+            self.matrix = [[default for _ in range(cols)] for _ in range(rows)]
+        else:
+            matrix = data
+            if isinstance(data, dict):
+                matrix = data.get('matrix', [])
+            if isinstance(matrix, str):
+                matrix = self._parse_string(matrix)
+            self.matrix = [list(row) for row in matrix] if matrix else []
+        self._base_cell_size = 40
+        self._gap = 6
+
+    @staticmethod
+    def _parse_string(s):
+        rows = []
+        for line in s.replace('\n', ';').split(';'):
+            line = line.strip()
+            if not line:
+                continue
+            cells = []
+            for cell in line.split(','):
+                cell = cell.strip()
+                try:
+                    cells.append(int(cell))
+                except ValueError:
+                    try:
+                        cells.append(float(cell))
+                    except ValueError:
+                        cells.append(cell)
+            rows.append(cells)
+        return rows
+
+    def _to_rc(self, r, c):
+        r = self._to_index(r)
+        c = self._to_index(c)
+        n_rows = len(self.matrix)
+        if n_rows == 0:
+            raise ValueError("Table is empty")
+        if r < 0:
+            r += n_rows
+        n_cols = len(self.matrix[r]) if 0 <= r < n_rows else 0
+        if c < 0:
+            c += n_cols
+        if r < 0 or r >= n_rows:
+            raise ValueError(f"Table row {r} out of range (0..{n_rows - 1})")
+        if c < 0 or c >= n_cols:
+            raise ValueError(f"Table col {c} out of range (0..{n_cols - 1})")
+        return r, c
+
+    # ---------- Методы-запросы (вызываются через _evaluate_expression) ----------
+
+    def get(self, r, c):
+        rr, cc = self._to_rc(r, c)
+        return self.matrix[rr][cc]
+
+    def rows(self):
+        return len(self.matrix)
+
+    def cols(self):
+        return len(self.matrix[0]) if self.matrix else 0
+
+    # ---------- Методы-команды ----------
+
+    def set(self, r, c, value):
+        rr, cc = self._to_rc(r, c)
+        self.matrix[rr][cc] = value
+        return [self._tag({
+            'component': 'update_cell',
+            'params': {'row': rr, 'col': cc, 'value': value},
+        })]
+
+    def _highlight_cell(self, r, c, color):
+        rr, cc = self._to_rc(r, c)
+        self._colors[(rr, cc)] = color
+        return self._tag({
+            'component': 'highlight_cell',
+            'params': {'row': rr, 'col': cc, 'color': color},
+        })
+
+    def _unhighlight_cell(self, r, c):
+        rr, cc = self._to_rc(r, c)
+        self._colors.pop((rr, cc), None)
+        return self._tag({
+            'component': 'unhighlight_cell',
+            'params': {'row': rr, 'col': cc},
+        })
+
+    def handle(self, component, params):
+        if component == 'create_table':
+            return [self._tag({
+                'component': 'create_table',
+                'params': {
+                    'rows': len(self.matrix),
+                    'cols': len(self.matrix[0]) if self.matrix else 0,
+                    'cells': [list(row) for row in self.matrix],
+                },
+            })]
+
+        if component == 'set':
+            return self.set(params['row'], params['col'], params['value'])
+
+        if component == 'highlight_cell':
+            return [self._highlight_cell(
+                params['row'], params['col'], params['color']
+            )]
+
+        if component == 'unhighlight_cell':
+            return [self._unhighlight_cell(params['row'], params['col'])]
+
+        if component == 'highlight_row':
+            r = self._to_index(params['row'])
+            if r < 0:
+                r += len(self.matrix)
+            if r < 0 or r >= len(self.matrix):
+                raise ValueError(f"Table row {r} out of range")
+            color = params['color']
+            raw = []
+            for c in range(len(self.matrix[r])):
+                raw.append(self._highlight_cell(r, c, color))
+            return raw
+
+        if component == 'unhighlight_row':
+            r = self._to_index(params['row'])
+            if r < 0:
+                r += len(self.matrix)
+            raw = []
+            for c in range(len(self.matrix[r])):
+                raw.append(self._unhighlight_cell(r, c))
+            return raw
+
+        if component == 'highlight_col':
+            c = self._to_index(params['col'])
+            color = params['color']
+            raw = []
+            for r in range(len(self.matrix)):
+                if c < 0:
+                    c_local = c + len(self.matrix[r])
+                else:
+                    c_local = c
+                raw.append(self._highlight_cell(r, c_local, color))
+            return raw
+
+        if component == 'unhighlight_col':
+            c = self._to_index(params['col'])
+            raw = []
+            for r in range(len(self.matrix)):
+                if c < 0:
+                    c_local = c + len(self.matrix[r])
+                else:
+                    c_local = c
+                raw.append(self._unhighlight_cell(r, c_local))
+            return raw
+
+        if component in ('get', 'rows', 'cols'):
+            # Эти методы вызываются через _evaluate_expression напрямую,
+            # не через handle. Если всё же попали сюда — команд нет.
+            return []
+
+        raise ValueError(f"Unknown table component: {component}")
+
+    def build_snapshot_dict(self):
+        cells = []
+        cs = self._base_cell_size
+        gap = self._gap
+        for r, row in enumerate(self.matrix):
+            for c, value in enumerate(row):
+                cells.append({
+                    'r': r,
+                    'c': c,
+                    'value': value,
+                    'color': self._colors.get((r, c)),
+                    'x': c * (cs + gap),
+                    'y': r * (cs + gap),
+                })
+        return {
+            'type': 'table',
+            'rows': len(self.matrix),
+            'cols': len(self.matrix[0]) if self.matrix else 0,
+            'cells': cells,
+        }
+
+
 # ======================= ФАБРИКА =======================
 
 _STRUCTURES = {
     'vector': VectorStructure,
     'graph': GraphStructure,
     'tree': TreeStructure,
+    'table': TableStructure,
 }
 
 

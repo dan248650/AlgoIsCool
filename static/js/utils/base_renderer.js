@@ -6,6 +6,7 @@ export class BaseRenderer {
             speedFactor: 1.0,
             elementSize: 40,
             spacing: 10,
+            table_spacing: 5,
             colors: {
                 comparing: '#9400D3',
                 swapping: '#FF6B6B',

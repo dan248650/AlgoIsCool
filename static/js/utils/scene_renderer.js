@@ -1,11 +1,13 @@
 import { ArrayRenderer } from './array_renderer.js';
 import { GraphRenderer } from './graph_renderer.js';
+import { TableRenderer } from './table_renderer.js';
 import { WindowRenderer } from './window_renderer.js';
 
 const RENDERER_BY_TYPE = {
     'vector': ArrayRenderer,
     'graph': GraphRenderer,
     'tree': GraphRenderer,
+    'table': TableRenderer,
 };
 
 export class SceneRenderer {
@@ -48,6 +50,7 @@ export class SceneRenderer {
             speedFactor: 1.0,
             elementSize: 40,
             spacing: 10,
+            table_spacing: 5,
             structureGap: 20,
             colors: {
                 comparing: '#9400D3',

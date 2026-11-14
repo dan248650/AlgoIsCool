@@ -701,3 +701,7 @@ body::after {
     will-change: transform;
     width: 100%;
 }
+
+.table-cell {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}

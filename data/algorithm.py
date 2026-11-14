@@ -1832,3 +1832,352 @@ def add_jump_game():
         definition_python=python_code,
         definition_mode='python',
     )
+
+
+def add_lcs():
+    python_code = (
+        'w = Window("main")\n'
+        's1 = Vector(input_text1)\n'
+        's2 = Vector(input_text2)\n'
+        'n = len(input_text1)\n'
+        'm = len(input_text2)\n'
+        'dp = Table(rows=n + 1, cols=m + 1, default=0)\n'
+        'w.attach(s1)\n'
+        'w.attach(s2)\n'
+        'w.attach(dp)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(1, n + 1):\n'
+        '    for j in range(1, m + 1):\n'
+        '        s1.highlight(i - 1, "yellow")\n'
+        '        s2.highlight(j - 1, "yellow")\n'
+        '        wait(150)\n'
+        '        if s1.value_at(i - 1) == s2.value_at(j - 1):\n'
+        '            dp.highlight_cell(i - 1, j - 1, "cyan")\n'
+        '            val = dp.get(i - 1, j - 1) + 1\n'
+        '            dp.set(i, j, val)\n'
+        '            dp.highlight_cell(i, j, "green")\n'
+        '        else:\n'
+        '            dp.highlight_cell(i - 1, j, "cyan")\n'
+        '            dp.highlight_cell(i, j - 1, "cyan")\n'
+        '            up = dp.get(i - 1, j)\n'
+        '            left = dp.get(i, j - 1)\n'
+        '            if up > left:\n'
+        '                dp.set(i, j, up)\n'
+        '            else:\n'
+        '                dp.set(i, j, left)\n'
+        '            dp.highlight_cell(i, j, "orange")\n'
+        '        wait(300)\n'
+        '        s1.unhighlight(i - 1)\n'
+        '        s2.unhighlight(j - 1)\n'
+        '        dp.unhighlight_cell(i - 1, j - 1)\n'
+        '        dp.unhighlight_cell(i - 1, j)\n'
+        '        dp.unhighlight_cell(i, j - 1)\n'
+        '        dp.unhighlight_cell(i, j)\n'
+    )
+    default_input = {"input_text1": "abcde", "input_text2": "ace"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="lcs",
+        name="Longest Common Subsequence",
+        display_name="Наибольшая общая подпоследовательность (LCS)",
+        category_id="search",
+        description_short="dp[i][j] = dp[i-1][j-1]+1 или max(dp[i-1][j], dp[i][j-1])",
+        description_full="Если s1[i-1]==s2[j-1], dp[i][j] = dp[i-1][j-1]+1. Иначе dp[i][j] = max(dp[i-1][j], dp[i][j-1]). Ответ = dp[n][m] — длина LCS.",
+        complexity="O(n·m)",
+        icon="LCS",
+        order_index=120,
+        default_input_data=default_input,
+        input_schema={
+            "input_text1": {"type": "string", "constraints": {"min_length": 3, "max_length": 6, "label": "Первая строка"}},
+            "input_text2": {"type": "string", "constraints": {"min_length": 3, "max_length": 6, "label": "Вторая строка"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_edit_distance():
+    python_code = (
+        'w = Window("main")\n'
+        's1 = Vector(input_text1)\n'
+        's2 = Vector(input_text2)\n'
+        'n = len(input_text1)\n'
+        'm = len(input_text2)\n'
+        'dp = Table(rows=n + 1, cols=m + 1, default=0)\n'
+        'w.attach(s1)\n'
+        'w.attach(s2)\n'
+        'w.attach(dp)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(0, n + 1):\n'
+        '    dp.set(i, 0, i)\n'
+        'for j in range(0, m + 1):\n'
+        '    dp.set(0, j, j)\n'
+        'wait(400)\n'
+        '\n'
+        'for i in range(1, n + 1):\n'
+        '    for j in range(1, m + 1):\n'
+        '        s1.highlight(i - 1, "yellow")\n'
+        '        s2.highlight(j - 1, "yellow")\n'
+        '        wait(150)\n'
+        '        if s1.value_at(i - 1) == s2.value_at(j - 1):\n'
+        '            dp.highlight_cell(i - 1, j - 1, "cyan")\n'
+        '            val = dp.get(i - 1, j - 1)\n'
+        '            dp.set(i, j, val)\n'
+        '            dp.highlight_cell(i, j, "green")\n'
+        '        else:\n'
+        '            dp.highlight_cell(i - 1, j - 1, "cyan")\n'
+        '            dp.highlight_cell(i - 1, j, "cyan")\n'
+        '            dp.highlight_cell(i, j - 1, "cyan")\n'
+        '            diag = dp.get(i - 1, j - 1) + 1\n'
+        '            up = dp.get(i - 1, j) + 1\n'
+        '            left = dp.get(i, j - 1) + 1\n'
+        '            best = diag\n'
+        '            if up < best:\n'
+        '                best = up\n'
+        '            if left < best:\n'
+        '                best = left\n'
+        '            dp.set(i, j, best)\n'
+        '            dp.highlight_cell(i, j, "orange")\n'
+        '        wait(300)\n'
+        '        s1.unhighlight(i - 1)\n'
+        '        s2.unhighlight(j - 1)\n'
+        '        dp.unhighlight_cell(i - 1, j - 1)\n'
+        '        dp.unhighlight_cell(i - 1, j)\n'
+        '        dp.unhighlight_cell(i, j - 1)\n'
+        '        dp.unhighlight_cell(i, j)\n'
+    )
+    default_input = {"input_text1": "kitten", "input_text2": "sitting"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="edit-distance",
+        name="Edit distance",
+        display_name="Расстояние редактирования (Левенштейн)",
+        category_id="search",
+        description_short="Минимум операций insert/delete/replace",
+        description_full="dp[i][j] — минимум операций, чтобы превратить s1[0..i-1] в s2[0..j-1]. Совпало → dp[i-1][j-1]. Не совпало → min(diag, up, left) + 1 (replace, delete, insert).",
+        complexity="O(n·m)",
+        icon="edit",
+        order_index=121,
+        default_input_data=default_input,
+        input_schema={
+            "input_text1": {"type": "string", "constraints": {"min_length": 4, "max_length": 8, "label": "Исходная строка"}},
+            "input_text2": {"type": "string", "constraints": {"min_length": 4, "max_length": 8, "label": "Целевая строка"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_knapsack():
+    python_code = (
+        'w = Window("main")\n'
+        'weights = Vector(input_weights)\n'
+        'values = Vector(input_values)\n'
+        'n = len(input_weights)\n'
+        'C = capacity\n'
+        'dp = Table(rows=n + 1, cols=C + 1, default=0)\n'
+        'w.attach(weights)\n'
+        'w.attach(values)\n'
+        'w.attach(dp)\n'
+        'wait(500)\n'
+        '\n'
+        'for i in range(1, n + 1):\n'
+        '    weights.highlight(i - 1, "yellow")\n'
+        '    values.highlight(i - 1, "yellow")\n'
+        '    wait(300)\n'
+        '    for cap in range(0, C + 1):\n'
+        '        dp.highlight_cell(i - 1, cap, "cyan")\n'
+        '        if input_weights[i - 1] <= cap:\n'
+        '            take = dp.get(i - 1, cap - input_weights[i - 1]) + input_values[i - 1]\n'
+        '            skip = dp.get(i - 1, cap)\n'
+        '            if take > skip:\n'
+        '                dp.set(i, cap, take)\n'
+        '                dp.highlight_cell(i, cap, "green")\n'
+        '            else:\n'
+        '                dp.set(i, cap, skip)\n'
+        '                dp.highlight_cell(i, cap, "orange")\n'
+        '        else:\n'
+        '            dp.set(i, cap, dp.get(i - 1, cap))\n'
+        '            dp.highlight_cell(i, cap, "orange")\n'
+        '        wait(200)\n'
+        '        dp.unhighlight_cell(i - 1, cap)\n'
+        '        dp.unhighlight_cell(i, cap)\n'
+        '    weights.unhighlight(i - 1)\n'
+        '    values.unhighlight(i - 1)\n'
+    )
+    default_input = {"input_weights": [2, 3, 4], "input_values": [3, 4, 5], "capacity": 6}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="knapsack",
+        name="0/1 Knapsack",
+        display_name="Задача о рюкзаке (0/1)",
+        category_id="search",
+        description_short="Максимум ценности при ограничении по весу",
+        description_full="dp[i][w] — максимум ценности, используя первые i предметов и вместимость w. Если предмет i-1 влезает: max(взять, не взять). Иначе — только не взять.",
+        complexity="O(n·W)",
+        icon="🎒",
+        order_index=122,
+        default_input_data=default_input,
+        input_schema={
+            "input_weights": {"type": "array", "constraints": {
+                "min_length": 2, "max_length": 8, "min_value": 1, "max_value": 5,
+                "label": "Веса"
+            }},
+            "input_values": {
+                "type": "array",
+                "constraints": {
+                    "min_value": 1, "max_value": 10,
+                    "label": "Ценности"
+                },
+                "depends_on": {"field": "input_weights", "mode": "same_length"}
+            },
+            "capacity": {
+                "type": "number",
+                "constraints": {"min": 1, "nonnegative": True, "label": "Вместимость"},
+                "depends_on": {"field": "input_weights", "mode": "sum_scaled", "ratio": 0.7}
+            }
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_matrix_chain():
+    python_code = (
+        'w = Window("main")\n'
+        'dims = Vector(input_dimensions)\n'
+        'n = len(input_dimensions) - 1\n'
+        'dp = Table(rows=n, cols=n, default=0)\n'
+        'w.attach(dims)\n'
+        'w.attach(dp)\n'
+        'wait(500)\n'
+        '\n'
+        'for L in range(2, n + 1):\n'
+        '    for i in range(0, n - L + 1):\n'
+        '        j = i + L - 1\n'
+        '        dp.highlight_cell(i, j, "yellow")\n'
+        '        wait(200)\n'
+        '        best = 1000000000\n'
+        '        best_k = i\n'
+        '        for k in range(i, j):\n'
+        '            dims.highlight(k, "cyan")\n'
+        '            dims.highlight(k + 1, "cyan")\n'
+        '            dp.highlight_cell(i, k, "orange")\n'
+        '            dp.highlight_cell(k + 1, j, "orange")\n'
+        '            cost = dp.get(i, k) + dp.get(k + 1, j) + input_dimensions[i] * input_dimensions[k + 1] * input_dimensions[j + 1]\n'
+        '            if cost < best:\n'
+        '                best = cost\n'
+        '                best_k = k\n'
+        '            wait(300)\n'
+        '            dims.unhighlight(k)\n'
+        '            dims.unhighlight(k + 1)\n'
+        '            dp.unhighlight_cell(i, k)\n'
+        '            dp.unhighlight_cell(k + 1, j)\n'
+        '        dp.set(i, j, best)\n'
+        '        dp.highlight_cell(i, j, "green")\n'
+        '        wait(400)\n'
+        '        dp.unhighlight_cell(i, j)\n'
+    )
+    default_input = {"input_dimensions": [10, 30, 5, 60]}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="matrix-chain",
+        name="Matrix chain multiplication",
+        display_name="Порядок перемножения матриц",
+        category_id="search",
+        description_short="Минимум скалярных умножений при разной расстановке скобок",
+        description_full="dims[i]..dims[i+1] — размеры матрицы i. dp[i][j] — минимум умножений для матриц i..j. Перебираем k — точку разделения. cost = dp[i][k] + dp[k+1][j] + dims[i]·dims[k+1]·dims[j+1].",
+        complexity="O(n³)",
+        icon="×",
+        order_index=123,
+        default_input_data=default_input,
+        input_schema={
+            "input_dimensions": {"type": "array", "constraints": {"min_length": 4, "max_length": 6, "min_value": 1, "max_value": 99, "label": "Размеры"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+def add_lps():
+    python_code = (
+        'w = Window("main")\n'
+        's = Vector(input_string)\n'
+        'r = Vector(input_string)\n'
+        'r.reverse()\n'
+        'n = len(input_string)\n'
+        'dp = Table(rows=n + 1, cols=n + 1, default=0)\n'
+        'w.attach(s)\n'
+        'w.attach(r)\n'
+        'w.attach(dp)\n'
+        'wait(600)\n'
+        '\n'
+        'for i in range(1, n + 1):\n'
+        '    for j in range(1, n + 1):\n'
+        '        s.highlight(i - 1, "yellow")\n'
+        '        r.highlight(j - 1, "yellow")\n'
+        '        wait(150)\n'
+        '        if s.value_at(i - 1) == r.value_at(j - 1):\n'
+        '            dp.highlight_cell(i - 1, j - 1, "cyan")\n'
+        '            val = dp.get(i - 1, j - 1) + 1\n'
+        '            dp.set(i, j, val)\n'
+        '            dp.highlight_cell(i, j, "green")\n'
+        '        else:\n'
+        '            dp.highlight_cell(i - 1, j, "cyan")\n'
+        '            dp.highlight_cell(i, j - 1, "cyan")\n'
+        '            up = dp.get(i - 1, j)\n'
+        '            left = dp.get(i, j - 1)\n'
+        '            if up > left:\n'
+        '                dp.set(i, j, up)\n'
+        '            else:\n'
+        '                dp.set(i, j, left)\n'
+        '            dp.highlight_cell(i, j, "orange")\n'
+        '        wait(300)\n'
+        '        s.unhighlight(i - 1)\n'
+        '        r.unhighlight(j - 1)\n'
+        '        dp.unhighlight_cell(i - 1, j - 1)\n'
+        '        dp.unhighlight_cell(i - 1, j)\n'
+        '        dp.unhighlight_cell(i, j - 1)\n'
+        '        dp.unhighlight_cell(i, j)\n'
+    )
+    default_input = {"input_string": "bbabcbcab"}
+    default_settings = {"speed_factor": 1.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="lps",
+        name="Longest Palindromic Subsequence",
+        display_name="Наибольшая палиндромная подпоследовательность",
+        category_id="search",
+        description_short="LCS(s, reverse(s)) — длина максимального палиндрома",
+        description_full="Палиндромная подпоследовательность s совпадает с подпоследовательностью reverse(s). Задача сводится к LCS(s, reverse(s)). dp[i][j] — длина LPS для s[0..i-1] и reverse(s)[0..j-1].",
+        complexity="O(n²)",
+        icon="↺",
+        order_index=124,
+        default_input_data=default_input,
+        input_schema={
+            "input_string": {"type": "string", "constraints": {"min_length": 4, "max_length": 16, "alphabet": "abcdef"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )

@@ -181,26 +181,41 @@ class BaseInterpreter:
         except ValueError:
             pass
 
-        for op in ['+', '-', '*', '/']:
-            if op in expr:
-                parts = expr.rsplit(op, 1)
-                if len(parts) == 2:
-                    left = self._evaluate_expression(parts[0].strip(), state)
-                    right = self._evaluate_expression(parts[1].strip(), state)
-                    if op == '+':
-                        if isinstance(left, list) and isinstance(right, list):
-                            return left + right
-                        if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-                            return left + right
-                    elif op == '-':
-                        if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-                            return left - right
-                    elif op == '*':
-                        if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-                            return left * right
-                    elif op == '/':
-                        if isinstance(left, (int, float)) and isinstance(right, (int, float)) and right != 0:
-                            return left / right
+        # Разбиваем по оператору на верхнем уровне скобок.
+        # rsplit('-', 1) на 'cap - input_weights[i - 1]' режет по
+        # последнему '-', который ВНУТРИ [...], и ломает выражение.
+        # Приоритет: сначала +- (низкий), потом */ (высокий).
+        idx = self._find_top_level_op(expr, '+-')
+        if idx > 0:
+            ch = expr[idx]
+            left = self._evaluate_expression(expr[:idx].strip(), state)
+            right = self._evaluate_expression(expr[idx + 1:].strip(), state)
+            if ch == '+':
+                if isinstance(left, list) and isinstance(right, list):
+                    return left + right
+                if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                    return left + right
+                if isinstance(left, str) and isinstance(right, str):
+                    return left + right
+            elif ch == '-':
+                if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                    return left - right
+
+        idx = self._find_top_level_op(expr, '*/')
+        if idx > 0:
+            ch = expr[idx]
+            left = self._evaluate_expression(expr[:idx].strip(), state)
+            right = self._evaluate_expression(expr[idx + 1:].strip(), state)
+            if ch == '*':
+                if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                    return left * right
+                if isinstance(left, str) and isinstance(right, int):
+                    return left * right
+                if isinstance(left, int) and isinstance(right, str):
+                    return right * left
+            elif ch == '/':
+                if isinstance(left, (int, float)) and isinstance(right, (int, float)) and right != 0:
+                    return left / right
 
         # Доступ по индексу: сначала простой случай arr[i]
         # (в индексе допускаются отрицательные значения — arr[-1]).
@@ -281,21 +296,6 @@ class BaseInterpreter:
                     raise ValueError("len() takes exactly one argument")
                 return len(args[0])
 
-        for op in ['+', '*']:
-            if op in expr:
-                parts = expr.rsplit(op, 1)
-                if len(parts) == 2:
-                    left = self._evaluate_expression(parts[0].strip(), state)
-                    right = self._evaluate_expression(parts[1].strip(), state)
-                    if op == '+':
-                        if isinstance(left, str) and isinstance(right, str):
-                            return left + right
-                    elif op == '*':
-                        if isinstance(left, str) and isinstance(right, int):
-                            return left * right
-                        if isinstance(left, int) and isinstance(right, str):
-                            return right * left
-
         return expr
 
     @staticmethod
@@ -354,6 +354,23 @@ class BaseInterpreter:
             args.append(current.strip())
 
         return head, method, args
+
+    @staticmethod
+    def _find_top_level_op(expr: str, ops: str) -> int:
+        """
+        Ищет справа налево оператор на верхнем уровне скобок.
+        Возвращает индекс или -1. '-' на позиции 0 (унарный) не считается.
+        """
+        depth = 0
+        for i in range(len(expr) - 1, -1, -1):
+            ch = expr[i]
+            if ch in ')]}':
+                depth += 1
+            elif ch in '([{':
+                depth -= 1
+            elif depth == 0 and ch in ops:
+                return i
+        return -1
 
     def _add_dict_item(self, target_dict, pair_expr, state):
         """Разбирает одну пару 'key: value' и кладёт в словарь."""
@@ -724,9 +741,12 @@ class BaseInterpreter:
         structure = create_structure(type_name, data, name=name)
         self.structures[name] = structure
 
-        initial_component = (
-            'create_graph' if type_name in ('graph', 'tree') else 'create_elements'
-        )
+        if type_name in ('graph', 'tree'):
+            initial_component = 'create_graph'
+        elif type_name == 'table':
+            initial_component = 'create_table'
+        else:
+            initial_component = 'create_elements'
         raw = structure.handle(initial_component, {})
         self._record_structure_commands(raw, commands)
 

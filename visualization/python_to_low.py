@@ -7,6 +7,7 @@ STRUCTURE_CLASSES = {
     'Vector': 'vector',
     'Graph': 'graph',
     'Tree': 'tree',
+    'Table': 'table',
 }
 
 # Класс окна.
@@ -19,6 +20,7 @@ STRUCTURE_METHODS = {
     'unhighlight',
     'set_opacity',
     'swap',
+    'reverse',
     'highlight_edge',
     'unhighlight_edge',
     'highlight_node',
@@ -33,6 +35,16 @@ STRUCTURE_METHODS = {
     'pop',
     'insert',
     'remove',
+    # table
+    'get',
+    'rows',
+    'cols',
+    'highlight_cell',
+    'unhighlight_cell',
+    'highlight_row',
+    'unhighlight_row',
+    'highlight_col',
+    'unhighlight_col',
 }
 
 # Методы окна: имя метода → компонент.
@@ -286,6 +298,22 @@ class PythonToLowTransformer(ast.NodeVisitor):
                 'layout': 'hierarchical',
             }
 
+        if type_name == 'table':
+            # Table(rows=N, cols=M, default=X) — пустая таблица нужного размера
+            if kwargs:
+                data = {}
+                for key in ['rows', 'cols']:
+                    if key in kwargs:
+                        data[key] = self._expr_to_data(kwargs[key])
+                if 'default' in kwargs:
+                    data['default'] = self._expr_to_data(kwargs['default'])
+                if data:
+                    return data
+            # Table(matrix) — из готового списка списков
+            if args:
+                return {'matrix': self._expr_to_data(args[0])}
+            return {'matrix': []}
+
         raise SyntaxError(f"Не знаю, как извлечь данные для типа '{type_name}'")
 
     def _expr_to_data(self, node):
@@ -529,6 +557,9 @@ class PythonToLowTransformer(ast.NodeVisitor):
             params['j'] = self._method_arg(args[1]) if len(args) > 1 else None
             return params
 
+        if method_name == 'reverse':
+            return params
+
         if method_name in ('highlight_edge', 'unhighlight_edge'):
             params['from'] = self._method_arg(args[0]) if args else None
             params['to'] = self._method_arg(args[1]) if len(args) > 1 else None
@@ -575,8 +606,15 @@ class PythonToLowTransformer(ast.NodeVisitor):
             return params
 
         if method_name == 'set':
-            params['index'] = self._method_arg(args[0]) if args else None
-            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
+            # Vector: set(index, value) — 2 аргумента
+            # Table:  set(row, col, value) — 3 аргумента
+            if len(args) >= 3:
+                params['row'] = self._method_arg(args[0])
+                params['col'] = self._method_arg(args[1])
+                params['value'] = self._method_arg(args[2])
+            else:
+                params['index'] = self._method_arg(args[0]) if args else None
+                params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
             return params
 
         if method_name == 'append':
@@ -593,6 +631,42 @@ class PythonToLowTransformer(ast.NodeVisitor):
 
         if method_name == 'remove':
             params['index'] = self._method_arg(args[0]) if args else None
+            return params
+
+        if method_name in ('get', 'unhighlight_cell', 'unhighlight_row'):
+            if method_name == 'get':
+                params['row'] = self._method_arg(args[0]) if args else None
+                params['col'] = self._method_arg(args[1]) if len(args) > 1 else None
+                return params
+            if method_name == 'unhighlight_cell':
+                params['row'] = self._method_arg(args[0]) if args else None
+                params['col'] = self._method_arg(args[1]) if len(args) > 1 else None
+                return params
+            if method_name == 'unhighlight_row':
+                params['row'] = self._method_arg(args[0]) if args else None
+                return params
+
+        if method_name == 'highlight_cell':
+            params['row'] = self._method_arg(args[0]) if args else None
+            params['col'] = self._method_arg(args[1]) if len(args) > 1 else None
+            params['color'] = self._method_arg(args[2]) if len(args) > 2 else None
+            return params
+
+        if method_name == 'highlight_row':
+            params['row'] = self._method_arg(args[0]) if args else None
+            params['color'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        if method_name == 'highlight_col':
+            params['col'] = self._method_arg(args[0]) if args else None
+            params['color'] = self._method_arg(args[1]) if len(args) > 1 else None
+            return params
+
+        if method_name == 'unhighlight_col':
+            params['col'] = self._method_arg(args[0]) if args else None
+            return params
+
+        if method_name in ('rows', 'cols'):
             return params
 
         return params

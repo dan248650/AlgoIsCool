@@ -32,6 +32,11 @@ from data.algorithm import (
     add_house_robber,
     add_max_product_subarray,
     add_jump_game,
+    add_lcs,
+    add_edit_distance,
+    add_knapsack,
+    add_matrix_chain,
+    add_lps,
 )
 from data.category import init_categories
 
@@ -128,6 +133,11 @@ def init_algorithms():
     update_or_create(add_house_robber)
     update_or_create(add_max_product_subarray)
     update_or_create(add_jump_game)
+    update_or_create(add_lcs)
+    update_or_create(add_edit_distance)
+    update_or_create(add_knapsack)
+    update_or_create(add_matrix_chain)
+    update_or_create(add_lps)
     db.session.commit()
 
 
