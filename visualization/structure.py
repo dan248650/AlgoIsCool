@@ -19,7 +19,9 @@ from .layout import compute_layout, compute_tree_layout
 
 
 class Structure(ABC):
-    type_name = None  # 'vector' | 'graph' | ...
+    type_name = None            # 'vector' | 'graph' | ...
+    python_class_name = None    # 'Vector' | 'Graph' | ... (как в high-level DSL)
+    COMMAND_METHODS = set()     # методы, порождающие команды визуализации
 
     def __init__(self):
         self.name = None       # имя экземпляра (задаёт интерпретатор)
@@ -62,7 +64,21 @@ class Structure(ABC):
                 pass
         raise ValueError(f"Некорректный индекс: {value!r}")
 
+    # ---------- DSL: парсинг конструктора и методов ----------
+    @classmethod
+    def build_data(cls, call_node, expr_to_data):
+        """Парсит аргументы конструктора. Переопределяется в наследниках."""
+        return []
+
+    @classmethod
+    def parse_method(cls, method_name, call_node, method_arg):
+        """Парсит аргументы метода-команды. Переопределяется в наследниках."""
+        raise ValueError(f"{cls.__name__}: unknown method {method_name}")
+
     # ---------- Абстрактная часть ----------
+    @abstractmethod
+    def initial_command(self):
+        """Возвращает (component, params) для первой команды отрисовки."""
 
     @abstractmethod
     def handle(self, component: str, params: dict) -> list:
@@ -82,12 +98,83 @@ class Structure(ABC):
 
 class VectorStructure(Structure):
     type_name = 'vector'
+    python_class_name = 'Vector'
+    COMMAND_METHODS = {
+        'highlight',
+        'unhighlight',
+        'set_opacity',
+        'swap',
+        'set',
+        'append',
+        'pop',
+        'insert',
+        'remove',
+        'reverse',
+    }
 
     def __init__(self, array):
         super().__init__()
         self.array = list(array)
         self._base_element_size = 40
         self._spacing = 10
+
+    @classmethod
+    def build_data(cls, call_node, expr_to_data):
+        args = call_node.args
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+        arg = args[0] if args else kwargs.get('array')
+        if arg is None:
+            return []
+        return expr_to_data(arg)
+
+    @classmethod
+    def parse_method(cls, method_name, call_node, method_arg):
+        args = call_node.args
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+
+        if method_name == 'highlight':
+            p = {
+                'indices': method_arg(args[0]) if args else None,
+                'color': method_arg(args[1]) if len(args) > 1
+                else method_arg(kwargs.get('color')),
+            }
+            if 'style' in kwargs:
+                p['style'] = method_arg(kwargs['style'])
+            return p
+        if method_name == 'unhighlight':
+            return {'indices': method_arg(args[0]) if args else None}
+        if method_name == 'set_opacity':
+            return {
+                'indices': method_arg(args[0]) if args else None,
+                'opacity': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        if method_name == 'swap':
+            return {
+                'i': method_arg(args[0]) if args else None,
+                'j': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        if method_name == 'set':
+            return {
+                'index': method_arg(args[0]) if args else None,
+                'value': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        if method_name == 'append':
+            return {'value': method_arg(args[0]) if args else None}
+        if method_name == 'pop':
+            return {}
+        if method_name == 'insert':
+            return {
+                'index': method_arg(args[0]) if args else None,
+                'value': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        if method_name == 'remove':
+            return {'index': method_arg(args[0]) if args else None}
+        if method_name == 'reverse':
+            return {}
+        raise ValueError(f"Vector: unknown method {method_name}")
+
+    def initial_command(self):
+        return 'create_elements', {}
 
     def handle(self, component, params):
         if component == 'create_elements':
@@ -334,6 +421,15 @@ class VectorStructure(Structure):
 
 class GraphStructure(Structure):
     type_name = 'graph'
+    python_class_name = 'Graph'
+    COMMAND_METHODS = {
+        'highlight_edge',
+        'unhighlight_edge',
+        'highlight_node',
+        'unhighlight_node',
+        'set_node_value',
+        'set_node_label',
+    }
 
     def __init__(self, data):
         super().__init__()
@@ -357,6 +453,55 @@ class GraphStructure(Structure):
         # Параметры раскладки
         self._layout_name = data.get('layout', 'kamada_kawai')
         self._layout_scale = data.get('layout_scale', 100)
+
+    @classmethod
+    def build_data(cls, call_node, expr_to_data):
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+        return {
+            'nodes': expr_to_data(kwargs.get('nodes')) or [],
+            'edges': expr_to_data(kwargs.get('edges')) or [],
+            'directed': (expr_to_data(kwargs.get('directed'))
+                         if 'directed' in kwargs else False),
+        }
+
+    @classmethod
+    def parse_method(cls, method_name, call_node, method_arg):
+        args = call_node.args
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+
+        if method_name in ('highlight_edge', 'unhighlight_edge'):
+            p = {
+                'from': method_arg(args[0]) if args else None,
+                'to': method_arg(args[1]) if len(args) > 1 else None,
+            }
+            if method_name == 'highlight_edge':
+                p['color'] = (method_arg(args[2]) if len(args) > 2
+                              else method_arg(kwargs.get('color')))
+            return p
+
+        if method_name in ('highlight_node', 'unhighlight_node'):
+            p = {'node_id': method_arg(args[0]) if args else None}
+            if method_name == 'highlight_node':
+                p['color'] = (method_arg(args[1]) if len(args) > 1
+                              else method_arg(kwargs.get('color')))
+            return p
+
+        if method_name == 'set_node_value':
+            return {
+                'node_id': method_arg(args[0]) if args else None,
+                'value': method_arg(args[1]) if len(args) > 1 else None,
+                'label': (method_arg(args[2]) if len(args) > 2
+                          else method_arg(kwargs.get('label'))),
+            }
+        if method_name == 'set_node_label':
+            return {
+                'node_id': method_arg(args[0]) if args else None,
+                'label': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        raise ValueError(f"Graph: unknown method {method_name}")
+
+    def initial_command(self):
+        return 'create_graph', {}
 
     def _edge_key(self, a, b):
         if self.directed:
@@ -543,6 +688,12 @@ class GraphStructure(Structure):
 
 class TreeStructure(GraphStructure):
     type_name = 'tree'
+    python_class_name = 'Tree'
+    COMMAND_METHODS = GraphStructure.COMMAND_METHODS | {
+        'add_child',
+        'remove_leaf',
+        'highlight_path',
+    }
 
     def __init__(self, data):
         super().__init__(data)
@@ -574,6 +725,44 @@ class TreeStructure(GraphStructure):
         # как «родитель ↔ ребёнок» и считаем от корня.)
         self.directed = True
         self._build_parent_map()
+
+    @classmethod
+    def build_data(cls, call_node, expr_to_data):
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+        return {
+            'nodes': expr_to_data(kwargs.get('nodes')) or [],
+            'edges': expr_to_data(kwargs.get('edges')) or [],
+            'directed': True,
+            'root_id': expr_to_data(kwargs.get('root_id')),
+            'layout': 'hierarchical',
+        }
+
+    @classmethod
+    def parse_method(cls, method_name, call_node, method_arg):
+        args = call_node.args
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+
+        if method_name == 'add_child':
+            return {
+                'parent_id': method_arg(args[0]) if args else None,
+                'value': method_arg(args[1]) if len(args) > 1 else None,
+                'label': (method_arg(args[2]) if len(args) > 2
+                          else method_arg(kwargs.get('label'))),
+            }
+        if method_name == 'remove_leaf':
+            return {'node_id': method_arg(args[0]) if args else None}
+        if method_name == 'highlight_path':
+            return {
+                'from_id': method_arg(args[0]) if args else None,
+                'to_id': method_arg(args[1]) if len(args) > 1 else None,
+                'color': (method_arg(args[2]) if len(args) > 2
+                          else method_arg(kwargs.get('color'))),
+            }
+        # остальные — из Graph
+        return super().parse_method(method_name, call_node, method_arg)
+
+    def initial_command(self):
+        return 'create_graph', {}
 
     # ---------- Поиск корня ----------
 
@@ -872,6 +1061,16 @@ class TreeStructure(GraphStructure):
 
 class TableStructure(Structure):
     type_name = 'table'
+    python_class_name = 'Table'
+    COMMAND_METHODS = {
+        'set',
+        'highlight_cell',
+        'unhighlight_cell',
+        'highlight_row',
+        'unhighlight_row',
+        'highlight_col',
+        'unhighlight_col',
+    }
 
     def __init__(self, data):
         super().__init__()
@@ -894,6 +1093,62 @@ class TableStructure(Structure):
             self.matrix = [list(row) for row in matrix] if matrix else []
         self._base_cell_size = 40
         self._gap = 6
+
+    @classmethod
+    def build_data(cls, call_node, expr_to_data):
+        args = call_node.args
+        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
+        if kwargs:
+            data = {}
+            for key in ['rows', 'cols']:
+                if key in kwargs:
+                    data[key] = expr_to_data(kwargs[key])
+            if 'default' in kwargs:
+                data['default'] = expr_to_data(kwargs['default'])
+            if data:
+                return data
+        if args:
+            return {'matrix': expr_to_data(args[0])}
+        return {'matrix': []}
+
+    @classmethod
+    def parse_method(cls, method_name, call_node, method_arg):
+        args = call_node.args
+        if method_name == 'set':
+            return {
+                'row': method_arg(args[0]) if args else None,
+                'col': method_arg(args[1]) if len(args) > 1 else None,
+                'value': method_arg(args[2]) if len(args) > 2 else None,
+            }
+        if method_name == 'highlight_cell':
+            return {
+                'row': method_arg(args[0]) if args else None,
+                'col': method_arg(args[1]) if len(args) > 1 else None,
+                'color': method_arg(args[2]) if len(args) > 2 else None,
+            }
+        if method_name == 'unhighlight_cell':
+            return {
+                'row': method_arg(args[0]) if args else None,
+                'col': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        if method_name == 'highlight_row':
+            return {
+                'row': method_arg(args[0]) if args else None,
+                'color': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        if method_name == 'unhighlight_row':
+            return {'row': method_arg(args[0]) if args else None}
+        if method_name == 'highlight_col':
+            return {
+                'col': method_arg(args[0]) if args else None,
+                'color': method_arg(args[1]) if len(args) > 1 else None,
+            }
+        if method_name == 'unhighlight_col':
+            return {'col': method_arg(args[0]) if args else None}
+        raise ValueError(f"Table: unknown method {method_name}")
+
+    def initial_command(self):
+        return 'create_table', {}
 
     @staticmethod
     def _parse_string(s):
@@ -1065,9 +1320,9 @@ class TableStructure(Structure):
         }
 
 
-# ======================= ФАБРИКА =======================
+# ======================= РЕЕСТР =======================
 
-_STRUCTURES = {
+STRUCTURE_REGISTRY = {
     'vector': VectorStructure,
     'graph': GraphStructure,
     'tree': TreeStructure,
@@ -1076,8 +1331,8 @@ _STRUCTURES = {
 
 
 def create_structure(type_name: str, data, name: str = None) -> Structure:
-    if type_name not in _STRUCTURES:
+    if type_name not in STRUCTURE_REGISTRY:
         raise ValueError(f"Unknown structure type: {type_name}")
-    structure = _STRUCTURES[type_name](data)
+    structure = STRUCTURE_REGISTRY[type_name](data)
     structure.name = name
     return structure

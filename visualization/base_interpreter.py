@@ -741,13 +741,8 @@ class BaseInterpreter:
         structure = create_structure(type_name, data, name=name)
         self.structures[name] = structure
 
-        if type_name in ('graph', 'tree'):
-            initial_component = 'create_graph'
-        elif type_name == 'table':
-            initial_component = 'create_table'
-        else:
-            initial_component = 'create_elements'
-        raw = structure.handle(initial_component, {})
+        component, params = structure.initial_command()
+        raw = structure.handle(component, params)
         self._record_structure_commands(raw, commands)
 
     def _resolve_data(self, data, state, structure_name=None):

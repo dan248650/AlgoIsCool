@@ -2,50 +2,17 @@ import ast
 from _ast import stmt
 from typing import List, Dict
 
-# Классы-конструкторы структур. Имя класса → внутренний тип.
-STRUCTURE_CLASSES = {
-    'Vector': 'vector',
-    'Graph': 'graph',
-    'Tree': 'tree',
-    'Table': 'table',
+from visualization.structure import STRUCTURE_REGISTRY
+
+STRUCTURE_CTORS = {
+    cls.python_class_name: (type_name, cls)
+    for type_name, cls in STRUCTURE_REGISTRY.items()
 }
+# backward compat (для проверок "if name in STRUCTURE_CLASSES")
+STRUCTURE_CLASSES = {n: t for n, (t, _) in STRUCTURE_CTORS.items()}
 
 # Класс окна.
 WINDOW_CLASS = 'Window'
-
-# Методы структур, порождающие low-level команды с полем 'structure'.
-# (имя метода = имя компонента; если разойдутся — расширим здесь)
-STRUCTURE_METHODS = {
-    'highlight',
-    'unhighlight',
-    'set_opacity',
-    'swap',
-    'reverse',
-    'highlight_edge',
-    'unhighlight_edge',
-    'highlight_node',
-    'unhighlight_node',
-    'set_node_value',
-    'set_node_label',
-    'add_child',
-    'remove_leaf',
-    'highlight_path',
-    'set',
-    'append',
-    'pop',
-    'insert',
-    'remove',
-    # table
-    'get',
-    'rows',
-    'cols',
-    'highlight_cell',
-    'unhighlight_cell',
-    'highlight_row',
-    'unhighlight_row',
-    'highlight_col',
-    'unhighlight_col',
-}
 
 # Методы окна: имя метода → компонент.
 WINDOW_METHODS = {
@@ -69,7 +36,8 @@ class PythonToLowTransformer(ast.NodeVisitor):
     def __init__(self):
         self.commands = []
         self.current_block = self.commands
-        self.structure_names = set()  # имена экземпляров структур
+        # {structure_name: type_name} — тип нужен для выбора класса-парсера
+        self.structure_names = {}
         self.window_names = set()  # имена окон
 
     # ---------- Обход модуля ----------
@@ -244,9 +212,9 @@ class PythonToLowTransformer(ast.NodeVisitor):
             })
 
     def _handle_create_structure(self, name, call_node, ctor_name):
-        type_name = STRUCTURE_CLASSES[ctor_name]
-        data = self._extract_structure_data(type_name, call_node)
-        self.structure_names.add(name)
+        type_name, cls = STRUCTURE_CTORS[ctor_name]
+        data = cls.build_data(call_node, self._expr_to_data)
+        self.structure_names[name] = type_name
         self.current_block.append({
             "component": "create_structure",
             "name": name,
@@ -264,57 +232,6 @@ class PythonToLowTransformer(ast.NodeVisitor):
             "window_id": name,
             "title": title or name,
         })
-
-    def _extract_structure_data(self, type_name, call_node):
-        args = call_node.args
-        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
-
-        if type_name == 'vector':
-            arg = None
-            if args:
-                arg = args[0]
-            elif 'array' in kwargs:
-                arg = kwargs['array']
-            if arg is None:
-                return []
-            # _expr_to_data вернёт литерал как есть (например, "abc"),
-            # выражение — в {'$expr': ...}. Различит их интерпретатор.
-            return self._expr_to_data(arg)
-
-        if type_name == 'graph':
-            # Graph(nodes=..., edges=..., directed=...)
-            return {
-                'nodes': self._expr_to_data(kwargs.get('nodes')) or [],
-                'edges': self._expr_to_data(kwargs.get('edges')) or [],
-                'directed': self._expr_to_data(kwargs.get('directed')) if 'directed' in kwargs else False,
-            }
-
-        if type_name == 'tree':
-            return {
-                'nodes': self._expr_to_data(kwargs.get('nodes')) or [],
-                'edges': self._expr_to_data(kwargs.get('edges')) or [],
-                'directed': True,
-                'root_id': self._expr_to_data(kwargs.get('root_id')),
-                'layout': 'hierarchical',
-            }
-
-        if type_name == 'table':
-            # Table(rows=N, cols=M, default=X) — пустая таблица нужного размера
-            if kwargs:
-                data = {}
-                for key in ['rows', 'cols']:
-                    if key in kwargs:
-                        data[key] = self._expr_to_data(kwargs[key])
-                if 'default' in kwargs:
-                    data['default'] = self._expr_to_data(kwargs['default'])
-                if data:
-                    return data
-            # Table(matrix) — из готового списка списков
-            if args:
-                return {'matrix': self._expr_to_data(args[0])}
-            return {'matrix': []}
-
-        raise SyntaxError(f"Не знаю, как извлечь данные для типа '{type_name}'")
 
     def _expr_to_data(self, node):
         """
@@ -477,13 +394,16 @@ class PythonToLowTransformer(ast.NodeVisitor):
         raise SyntaxError(f"Неподдерживаемый вызов: {ast.unparse(call_node)}")
 
     def _handle_structure_method(self, structure_name, method_name, call_node):
-        if method_name not in STRUCTURE_METHODS:
+        type_name = self.structure_names.get(structure_name)
+        if type_name is None:
+            raise SyntaxError(f"'{structure_name}' не является известной структурой")
+        cls = STRUCTURE_REGISTRY[type_name]
+        if method_name not in cls.COMMAND_METHODS:
             raise SyntaxError(
-                f"У структуры '{structure_name}' нет метода '{method_name}'. "
-                f"Допустимые: {', '.join(sorted(STRUCTURE_METHODS))}."
+                f"У структуры '{structure_name}' ({type_name}) нет метода '{method_name}'. "
+                f"Допустимые: {', '.join(sorted(cls.COMMAND_METHODS))}."
             )
-
-        params = self._build_method_params(method_name, call_node)
+        params = cls.parse_method(method_name, call_node, self._method_arg)
         self.current_block.append({
             "component": method_name,
             "structure": structure_name,
@@ -529,147 +449,6 @@ class PythonToLowTransformer(ast.NodeVisitor):
                 "structure": structure_name,
             })
             return
-
-    def _build_method_params(self, method_name, call_node):
-        args = call_node.args
-        kwargs = {kw.arg: kw.value for kw in call_node.keywords}
-        params = {}
-
-        if method_name == 'highlight':
-            params['indices'] = self._method_arg(args[0]) if args else None
-            params['color'] = (self._method_arg(args[1]) if len(args) > 1
-                               else self._method_arg(kwargs.get('color')))
-            if 'style' in kwargs:
-                params['style'] = self._method_arg(kwargs['style'])
-            return params
-
-        if method_name == 'unhighlight':
-            params['indices'] = self._method_arg(args[0]) if args else None
-            return params
-
-        if method_name == 'set_opacity':
-            params['indices'] = self._method_arg(args[0]) if args else None
-            params['opacity'] = self._method_arg(args[1]) if len(args) > 1 else None
-            return params
-
-        if method_name == 'swap':
-            params['i'] = self._method_arg(args[0]) if args else None
-            params['j'] = self._method_arg(args[1]) if len(args) > 1 else None
-            return params
-
-        if method_name == 'reverse':
-            return params
-
-        if method_name in ('highlight_edge', 'unhighlight_edge'):
-            params['from'] = self._method_arg(args[0]) if args else None
-            params['to'] = self._method_arg(args[1]) if len(args) > 1 else None
-            if method_name == 'highlight_edge':
-                params['color'] = (self._method_arg(args[2]) if len(args) > 2
-                                   else self._method_arg(kwargs.get('color')))
-            return params
-
-        if method_name in ('highlight_node', 'unhighlight_node'):
-            params['node_id'] = self._method_arg(args[0]) if args else None
-            if method_name == 'highlight_node':
-                params['color'] = (self._method_arg(args[1]) if len(args) > 1
-                                   else self._method_arg(kwargs.get('color')))
-            return params
-
-        if method_name == 'set_node_value':
-            params['node_id'] = self._method_arg(args[0]) if args else None
-            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
-            params['label'] = (self._method_arg(args[2]) if len(args) > 2
-                               else self._method_arg(kwargs.get('label')))
-            return params
-
-        if method_name == 'set_node_label':
-            params['node_id'] = self._method_arg(args[0]) if args else None
-            params['label'] = self._method_arg(args[1]) if len(args) > 1 else None
-            return params
-
-        if method_name == 'add_child':
-            params['parent_id'] = self._method_arg(args[0]) if args else None
-            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
-            params['label'] = (self._method_arg(args[2]) if len(args) > 2
-                               else self._method_arg(kwargs.get('label')))
-            return params
-
-        if method_name == 'remove_leaf':
-            params['node_id'] = self._method_arg(args[0]) if args else None
-            return params
-
-        if method_name == 'highlight_path':
-            params['from_id'] = self._method_arg(args[0]) if args else None
-            params['to_id'] = self._method_arg(args[1]) if len(args) > 1 else None
-            params['color'] = (self._method_arg(args[2]) if len(args) > 2
-                               else self._method_arg(kwargs.get('color')))
-            return params
-
-        if method_name == 'set':
-            # Vector: set(index, value) — 2 аргумента
-            # Table:  set(row, col, value) — 3 аргумента
-            if len(args) >= 3:
-                params['row'] = self._method_arg(args[0])
-                params['col'] = self._method_arg(args[1])
-                params['value'] = self._method_arg(args[2])
-            else:
-                params['index'] = self._method_arg(args[0]) if args else None
-                params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
-            return params
-
-        if method_name == 'append':
-            params['value'] = self._method_arg(args[0]) if args else None
-            return params
-
-        if method_name == 'pop':
-            return params
-
-        if method_name == 'insert':
-            params['index'] = self._method_arg(args[0]) if args else None
-            params['value'] = self._method_arg(args[1]) if len(args) > 1 else None
-            return params
-
-        if method_name == 'remove':
-            params['index'] = self._method_arg(args[0]) if args else None
-            return params
-
-        if method_name in ('get', 'unhighlight_cell', 'unhighlight_row'):
-            if method_name == 'get':
-                params['row'] = self._method_arg(args[0]) if args else None
-                params['col'] = self._method_arg(args[1]) if len(args) > 1 else None
-                return params
-            if method_name == 'unhighlight_cell':
-                params['row'] = self._method_arg(args[0]) if args else None
-                params['col'] = self._method_arg(args[1]) if len(args) > 1 else None
-                return params
-            if method_name == 'unhighlight_row':
-                params['row'] = self._method_arg(args[0]) if args else None
-                return params
-
-        if method_name == 'highlight_cell':
-            params['row'] = self._method_arg(args[0]) if args else None
-            params['col'] = self._method_arg(args[1]) if len(args) > 1 else None
-            params['color'] = self._method_arg(args[2]) if len(args) > 2 else None
-            return params
-
-        if method_name == 'highlight_row':
-            params['row'] = self._method_arg(args[0]) if args else None
-            params['color'] = self._method_arg(args[1]) if len(args) > 1 else None
-            return params
-
-        if method_name == 'highlight_col':
-            params['col'] = self._method_arg(args[0]) if args else None
-            params['color'] = self._method_arg(args[1]) if len(args) > 1 else None
-            return params
-
-        if method_name == 'unhighlight_col':
-            params['col'] = self._method_arg(args[0]) if args else None
-            return params
-
-        if method_name in ('rows', 'cols'):
-            return params
-
-        return params
 
     def _build_global_params(self, func_name, call_node):
         args = call_node.args
