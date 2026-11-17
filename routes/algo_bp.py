@@ -1,7 +1,11 @@
-from flask import Blueprint, render_template, jsonify, request, current_app
-from data.algorithm import Algorithm, db
-from data.category import Category
 import json
+
+from flask import Blueprint, render_template, jsonify, request
+
+from data.algorithm import Algorithm
+from data.category import Category
+
+from sqlalchemy import func, or_, and_
 
 algo_bp = Blueprint('algo', __name__, url_prefix='/algo')
 
@@ -20,7 +24,15 @@ def catalog_page():
             'algorithms': []
         }
 
-    algorithms = Algorithm.query.order_by(Algorithm.order_index).all()
+    algorithms = (
+        Algorithm.query
+        .outerjoin(Category, Algorithm.category_id == Category.id)
+        .order_by(
+            func.coalesce(Category.order_index, 0),
+            func.coalesce(Algorithm.order_index, 0),
+        )
+        .all()
+    )
     for algo in algorithms:
         cat_id = algo.category_id
         if cat_id in result:
@@ -55,7 +67,15 @@ def visualize_page(algorithm_id):
 @algo_bp.route('/api/algorithms', methods=['GET'])
 def api_get_algorithms():
     """Получить список всех алгоритмов"""
-    algorithms = Algorithm.query.all()
+    algorithms = (
+        Algorithm.query
+        .outerjoin(Category, Algorithm.category_id == Category.id)
+        .order_by(
+            func.coalesce(Category.order_index, 0),
+            func.coalesce(Algorithm.order_index, 0),
+        )
+        .all()
+    )
     return jsonify([{
         'id': algo.id,
         'name': algo.name,
@@ -89,15 +109,42 @@ def api_get_algorithm(algorithm_id):
 
 
 @algo_bp.route('/api/algorithm/<algorithm_id>/next', methods=['GET'])
+@algo_bp.route('/api/algorithm/<algorithm_id>/next', methods=['GET'])
 def api_next_algorithm(algorithm_id):
-    """Получить следующий алгоритм на основе order_index"""
+    """Следующий алгоритм в глобальном порядке:
+    сначала category.order_index, потом algorithm.order_index."""
     current = Algorithm.query.get_or_404(algorithm_id)
-    # Ищем следующий с большим order_index
-    next_algo = Algorithm.query.filter(Algorithm.order_index > current.order_index)\
-                               .order_by(Algorithm.order_index).first()
+
+    current_cat = (
+        Category.query.get(current.category_id) if current.category_id else None
+    )
+    current_cat_order = current_cat.order_index if current_cat else 0
+    current_alg_order = current.order_index if current.order_index is not None else 0
+
+    cat_order_col = func.coalesce(Category.order_index, 0)
+    alg_order_col = func.coalesce(Algorithm.order_index, 0)
+
+    next_algo = (
+        Algorithm.query
+        .outerjoin(Category, Algorithm.category_id == Category.id)
+        .filter(or_(
+            cat_order_col > current_cat_order,
+            and_(
+                cat_order_col == current_cat_order,
+                alg_order_col > current_alg_order,
+            ),
+        ))
+        .order_by(cat_order_col, alg_order_col)
+        .first()
+    )
     if not next_algo:
-        # Если нет следующего, берём первый (зацикливание)
-        next_algo = Algorithm.query.order_by(Algorithm.order_index).first()
+        # Зацикливание: первый в глобальном порядке
+        next_algo = (
+            Algorithm.query
+            .outerjoin(Category, Algorithm.category_id == Category.id)
+            .order_by(cat_order_col, alg_order_col)
+            .first()
+        )
     if next_algo:
         return jsonify({
             'next_id': next_algo.id,

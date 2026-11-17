@@ -1,7 +1,10 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, TextAreaField, SelectField, SubmitField
 from wtforms.validators import DataRequired, Optional, Length, NumberRange, ValidationError
+from flask import flash
 import json
+
+from visualization.python_to_low import generate_low_level_from_python
 
 
 class AlgorithmForm(FlaskForm):
@@ -18,7 +21,7 @@ class AlgorithmForm(FlaskForm):
 
     # Definition (разбит на отдельные поля)
     definition_initial_state = TextAreaField('Начальное состояние (JSON)', validators=[Optional()])
-    definition_steps = TextAreaField('Шаги (JSON)', validators=[DataRequired()])
+    definition_steps = TextAreaField('Шаги (JSON)', validators=[Optional()])
 
     definition_python = TextAreaField('Python-код описания визуализации', validators=[Optional()])
 
@@ -35,45 +38,79 @@ class AlgorithmForm(FlaskForm):
 
     submit = SubmitField('Сохранить')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Устанавливается валидатором definition_python; используется
+        # в admin_bp, чтобы не транслировать код повторно.
+        self._translated_definition = None
+
+    def _flash_error(self, field_name, message):
+        """Единый канал ошибки: и в flash, и в form.<field>.errors.
+        Шаблон рендерит errors под полем, layouts/base.html — flash
+        в глобальном баннере. Обе точки видны пользователю."""
+        flash(f'Ошибка в поле «{field_name}»: {message}', 'danger')
+        raise ValidationError(message)
+
     def validate_definition_python(self, field):
-        if self.definition_mode.data == 'python' and field.data:
-            try:
-                compile(field.data, '<string>', 'exec')
-            except SyntaxError as e:
-                raise ValidationError(f'Синтаксическая ошибка в Python-коде: {e}')
+        if self.definition_mode.data != 'python' or not field.data:
+            return
+
+        try:
+            input_data = json.loads(self.default_input_data.data) \
+                if self.default_input_data.data else {}
+        except (ValueError, TypeError):
+            input_data = {}
+        try:
+            settings = json.loads(self.default_settings.data) \
+                if self.default_settings.data else {}
+        except (ValueError, TypeError):
+            settings = {}
+
+        try:
+            self._translated_definition = generate_low_level_from_python(
+                field.data, input_data, settings
+            )
+        except Exception as e:
+            self._flash_error('definition_python', str(e))
 
     def validate_definition_steps(self, field):
         """Проверка, что steps — валидный JSON"""
         if field.data:
             try:
                 json.loads(field.data)
-            except json.JSONDecodeError:
-                raise ValueError('Неверный JSON в поле steps')
+            except json.JSONDecodeError as e:
+                self._flash_error('definition_steps', f'Неверный JSON: {e}')
 
     def validate_definition_initial_state(self, field):
         if field.data and field.data.strip():
             try:
                 json.loads(field.data)
-            except json.JSONDecodeError:
-                raise ValueError('Неверный JSON в начальном состоянии')
+            except json.JSONDecodeError as e:
+                self._flash_error('definition_initial_state',
+                                  f'Неверный JSON: {e}')
 
     def validate_input_schema(self, field):
         if field.data and field.data.strip():
             try:
                 json.loads(field.data)
-            except json.JSONDecodeError:
-                raise ValueError('Неверный JSON в input_schema')
+            except json.JSONDecodeError as e:
+                self._flash_error('input_schema', f'Неверный JSON: {e}')
 
     def validate_default_settings(self, field):
         if field.data and field.data.strip():
             try:
                 json.loads(field.data)
-            except json.JSONDecodeError:
-                raise ValueError('Неверный JSON в default_settings')
+            except json.JSONDecodeError as e:
+                self._flash_error('default_settings', f'Неверный JSON: {e}')
 
     def validate_default_input_data(self, field):
         if field.data and field.data.strip():
             try:
                 json.loads(field.data)
-            except json.JSONDecodeError:
-                raise ValueError('Неверный JSON в default_input_data')
+            except json.JSONDecodeError as e:
+                self._flash_error('default_input_data',
+                                  f'Неверный JSON: {e}')
+
+    @property
+    def translated_definition(self):
+        return self._translated_definition

@@ -705,3 +705,34 @@ body::after {
 .table-cell {
     border: 1px solid rgba(255, 255, 255, 0.15);
 }
+
+/* === Ошибки форм и API === */
+.global-errors-banner {
+    background: rgba(244, 67, 54, 0.85);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-family: monospace;
+    border: 1px solid rgba(244, 67, 54, 1);
+    max-height: 120px;
+    overflow-y: auto;
+    z-index: 30;
+}
+
+.global-errors-banner > div + div {
+    margin-top: 4px;
+}
+
+.input-field.has-error input,
+.input-field.has-error select {
+    border-color: #f44336 !important;
+}
+
+.input-error {
+    color: #f44336;
+    font-size: 11px;
+    margin-top: 4px;
+    line-height: 1.3;
+}

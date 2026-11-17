@@ -396,14 +396,38 @@ export class InputFormHandler {
             if (!input) continue;
             data[field] = this._parseField(input, spec);
         }
+        const errors = [];
         for (const [field, spec] of Object.entries(this.schema)) {
             const err = this._validateField(field, data[field], spec, data);
-            if (err) {
-                alert(`Ошибка в поле «${this.getLabel(field)}»: ${err}`);
-                return null;
-            }
+            if (err) errors.push({ field, label: this.getLabel(field), message: err });
         }
-        return data;
+        return { data, errors };
+    }
+
+    // Показывает ошибки inline: под каждым полем с ошибкой — красный текст,
+    // рамка поля красная. Никаких alert. Родитель решает, что делать ещё
+    // (например, общий баннер со списком всех ошибок).
+    showErrors(errors) {
+        this.clearErrors();
+        if (!errors || errors.length === 0) return;
+        for (const { field, message } of errors) {
+            const input = this.fields[field];
+            if (!input) continue;
+            const wrapper = input.closest('.input-field');
+            if (!wrapper) continue;
+            wrapper.classList.add('has-error');
+            const errEl = document.createElement('div');
+            errEl.className = 'input-error';
+            errEl.textContent = message;
+            wrapper.appendChild(errEl);
+        }
+    }
+
+    clearErrors() {
+        if (!this.container) return;
+        this.container.querySelectorAll('.input-error').forEach(el => el.remove());
+        this.container.querySelectorAll('.input-field.has-error')
+            .forEach(el => el.classList.remove('has-error'));
     }
 
     setData(data) {

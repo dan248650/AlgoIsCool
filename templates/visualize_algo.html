@@ -61,6 +61,7 @@
         <div class="algo-main">
             <!-- Вкладка визуализации -->
             <div class="tab-content active" id="visualization-tab">
+                <div id="scene-global-errors" class="global-errors-banner" style="display: none;"></div>
                 <div id="window-tabs" class="window-tabs" style="display: none;"></div>
                 <div id="visualization-area" class="visualization-area">
                 </div>
@@ -215,13 +216,21 @@
                     }
 
                     applyArrayBtn.onclick = () => {
-                        const newData = inputFormHandler.getData();
-                        if (newData) {
-                            Object.assign(inputData, newData);
-                            runVisualization();
+                        const { data, errors } = inputFormHandler.getData();
+                        inputFormHandler.showErrors(errors);
+                        if (errors.length > 0) {
+                            showGlobalError(
+                                errors.map(e => `«${e.label}»: ${e.message}`)
+                            );
+                            return;
                         }
+                        clearGlobalError();
+                        Object.assign(inputData, data);
+                        runVisualization();
                     };
                     generateRandomBtn.onclick = () => {
+                        inputFormHandler.clearErrors();
+                        clearGlobalError();
                         const randomData = inputFormHandler.generateRandom();
                         Object.assign(inputData, randomData);
                         runVisualization();
@@ -241,7 +250,8 @@
                 await runVisualization();
             } catch (error) {
                 console.error('Failed to load algorithm:', error);
-                showError(error.message);
+                if (inputFormHandler) inputFormHandler.clearErrors();
+                showGlobalError([error.message]);
             }
         }
 
@@ -279,6 +289,7 @@
             if (currentRenderEngine) { currentRenderEngine.clear(); currentRenderEngine = null; }
 
             currentAbortController = new AbortController();
+            clearGlobalError();
 
             try {
                 const response = await fetch('/algo/api/visualize', {
@@ -352,16 +363,39 @@
             } catch (error) {
                 if (error.name === 'AbortError') return;
                 console.error(error);
-                showError(error.message);
+                if (inputFormHandler) inputFormHandler.clearErrors();
+                showGlobalError([error.message]);
             } finally {
                 currentAbortController = null;
             }
         }
 
-        function showError(message) {
-            if (container) {
-                container.innerHTML = `<div style="color: #ff6b6b; padding: 20px; text-align: center;">❌ ${message}</div>`;
+        const globalErrorsEl = document.getElementById('scene-global-errors');
+
+        // Единая точка показа ошибок: валидация формы, ошибки API, ошибки
+        // загрузки алгоритма. Список строк → баннер. Inline-ошибки у полей
+        // показываются отдельно через inputFormHandler.showErrors().
+        function showGlobalError(messages) {
+            if (!globalErrorsEl) return;
+            if (!messages) messages = [];
+            if (typeof messages === 'string') messages = [messages];
+            if (messages.length === 0) {
+                clearGlobalError();
+                return;
             }
+            globalErrorsEl.innerHTML = '';
+            for (const msg of messages) {
+                const line = document.createElement('div');
+                line.textContent = '❌ ' + msg;
+                globalErrorsEl.appendChild(line);
+            }
+            globalErrorsEl.style.display = 'block';
+        }
+
+        function clearGlobalError() {
+            if (!globalErrorsEl) return;
+            globalErrorsEl.innerHTML = '';
+            globalErrorsEl.style.display = 'none';
         }
 
         function buildWindowTabs(snapshots, sceneRenderer) {

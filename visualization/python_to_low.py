@@ -40,6 +40,8 @@ class PythonToLowTransformer(ast.NodeVisitor):
         self.structure_names = {}
         self.window_names = set()  # имена окон
 
+        self.user_functions = {}  # name → [param names]
+
     # ---------- Обход модуля ----------
     def visit_Module(self, node):
         module: stmt
@@ -47,8 +49,6 @@ class PythonToLowTransformer(ast.NodeVisitor):
             self.visit(module)
 
     # ---------- Запрещённые конструкции ----------
-    def visit_FunctionDef(self, node):
-        raise SyntaxError(f"Определение функций не поддерживается (строка {node.lineno})")
 
     def visit_ClassDef(self, node):
         raise SyntaxError(f"Определение классов не поддерживается (строка {node.lineno})")
@@ -154,6 +154,15 @@ class PythonToLowTransformer(ast.NodeVisitor):
             if ctor_name == WINDOW_CLASS:
                 self._handle_create_window(target.id, node.value)
                 return
+            if ctor_name in self.user_functions:
+                args = [ast.unparse(a).strip() for a in node.value.args]
+                self.current_block.append({
+                    "component": "call_function_assign",
+                    "target": target.id,
+                    "function": ctor_name,
+                    "args": args,
+                })
+                return
 
         # 2. Множественное присваивание: a, b, ... = expr1, expr2, ...
         if isinstance(target, ast.Tuple):
@@ -210,6 +219,36 @@ class PythonToLowTransformer(ast.NodeVisitor):
                 "attr": t['attr'],
                 "value": value_expr,
             })
+
+    def visit_FunctionDef(self, node):
+        if node.args.vararg or node.args.kwarg or node.args.defaults:
+            raise SyntaxError(
+                f"Функция '{node.name}': поддерживаются только простые позиционные "
+                f"параметры (строка {node.lineno})"
+            )
+        params = [a.arg for a in node.args.args]
+        sub = []
+        old = self.current_block
+        self.current_block = sub
+        for stmt in node.body:
+            self.visit(stmt)
+        self.current_block = old
+        # Регистрируем ДО добавления команды, чтобы рекурсия внутри тела
+        # уже видела имя.
+        self.user_functions[node.name] = params
+        self.current_block.append({
+            "component": "define_function",
+            "name": node.name,
+            "params": params,
+            "body": sub,
+        })
+
+    def visit_Return(self, node):
+        value_expr = ast.unparse(node.value).strip() if node.value else 'None'
+        self.current_block.append({
+            "component": "return",
+            "value": value_expr,
+        })
 
     def _handle_create_structure(self, name, call_node, ctor_name):
         type_name, cls = STRUCTURE_CTORS[ctor_name]
@@ -385,6 +424,15 @@ class PythonToLowTransformer(ast.NodeVisitor):
                 })
                 return
 
+            if func_name in self.user_functions:
+                args = [ast.unparse(a).strip() for a in call_node.args]
+                self.current_block.append({
+                    "component": "call_function_discard",
+                    "function": func_name,
+                    "args": args,
+                })
+                return
+
             raise SyntaxError(
                 f"Функция '{func_name}(...)' не поддерживается. "
                 f"Допустимые глобальные функции: {', '.join(GLOBAL_FUNCTIONS)}. "
@@ -494,7 +542,15 @@ def generate_low_level_from_python(python_code: str, input_data: Dict, settings:
     try:
         commands = transformer.transform(python_code)
     except SyntaxError as e:
-        raise RuntimeError(f"Ошибка синтаксиса: {e}")
+        # Синтаксическая ошибка в пользовательском коде — это невалидный
+        # вход, а не внутренняя проблема. ValueError + from e сохраняет
+        # исходный traceback для логов.
+        raise ValueError(str(e)) from e
+    except Exception as e:
+        # Всё остальное — баг в самом трансляторе (например, если
+        # структура подняла ValueError с несогласованным именем метода).
+        # Отдельный текст, чтобы при отладке отличать от ошибок автора.
+        raise RuntimeError(f"Внутренняя ошибка трансляции: {e}") from e
 
     definition = {
         "initial_state": {},  # интерпретатор возьмёт всё из input_data

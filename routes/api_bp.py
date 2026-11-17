@@ -2,7 +2,9 @@ from flask import Blueprint, request, jsonify
 from utils.auth import login_required
 from flask_security import current_user
 from data.algorithm import Algorithm, db
+from data.category import Category
 from utils.slugify import slugify
+from sqlalchemy import func
 import re
 
 
@@ -137,7 +139,15 @@ def list_algorithms_admin():
     if not current_user.is_admin():
         return jsonify({'error': 'Access denied'}), 403
 
-    algorithms = Algorithm.query.order_by(Algorithm.order_index).all()
+    algorithms = (
+        Algorithm.query
+        .outerjoin(Category, Algorithm.category_id == Category.id)
+        .order_by(
+            func.coalesce(Category.order_index, 0),
+            func.coalesce(Algorithm.order_index, 0),
+        )
+        .all()
+    )
     result = []
     for algo in algorithms:
         result.append({

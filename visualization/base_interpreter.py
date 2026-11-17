@@ -15,6 +15,11 @@ class _ContinueLoop(Exception):
     pass
 
 
+class _ReturnValue(Exception):
+    def __init__(self, value):
+        self.value = value
+
+
 class BaseInterpreter:
     def __init__(self):
         self.functions = {
@@ -41,6 +46,11 @@ class BaseInterpreter:
         self.structures = {}  # {structure_name: Structure}
 
         self._loop_depth = 0
+
+        self._user_functions = {}
+        self._call_depth = 0
+        self._exec_settings = None
+        self._exec_commands = None
 
     def _swap_array_elements(self, array, i1, i2):
         result = array.copy()
@@ -295,6 +305,8 @@ class BaseInterpreter:
                 if len(args) != 1:
                     raise ValueError("len() takes exactly one argument")
                 return len(args[0])
+            if head in self._user_functions:
+                return self._call_user_function(head, args, state)
 
         return expr
 
@@ -525,6 +537,23 @@ class BaseInterpreter:
             self._handle_show_window(command, state, settings, commands)
         elif component == 'hide_window':
             self._handle_hide_window(command, state, settings, commands)
+        elif component == 'define_function':
+            self._user_functions[command['name']] = {
+                'params': command['params'],
+                'body': command['body'],
+            }
+        elif component == 'return':
+            value = self._evaluate_expression(command['value'], state)
+            raise _ReturnValue(value)
+        elif component == 'call_function_discard':
+            args = [self._evaluate_expression(a, state) for a in command['args']]
+            self._call_user_function(command['function'], args, state)
+        elif component == 'call_function_assign':
+            args = [self._evaluate_expression(a, state) for a in command['args']]
+            result = self._call_user_function(command['function'], args, state)
+            state[command['target']] = result
+            if not command['target'].startswith('_'):
+                self.variables[command['target']] = result
         elif 'structure' in command:
             structure_name = command['structure']
             structure = self.structures.get(structure_name)
@@ -823,6 +852,32 @@ class BaseInterpreter:
             'window': window_id,
         }, commands)
 
+    def _call_user_function(self, name, args, outer_state):
+        f = self._user_functions.get(name)
+        if f is None:
+            raise ValueError(f"Функция '{name}' не определена")
+        if len(args) != len(f['params']):
+            raise ValueError(
+                f"{name}: ожидалось {len(f['params'])} аргументов, получено {len(args)}"
+            )
+        if self._call_depth > 500:
+            raise RecursionError(
+                f"Превышена глубина рекурсии в функции '{name}' (>500). "
+                f"Возможно, отсутствует условие выхода."
+            )
+        local_state = dict(outer_state)
+        for p, v in zip(f['params'], args):
+            local_state[p] = v
+        self._call_depth += 1
+        try:
+            for cmd in f['body']:
+                self._execute_command(cmd, local_state, self._exec_settings, self._exec_commands)
+        except _ReturnValue as rv:
+            return rv.value
+        finally:
+            self._call_depth -= 1
+        return None
+
     def execute_algorithm(self, algorithm_definition: Dict, input_data: Dict, settings: Dict) -> Dict:
         state = {}
         self._snapshots = []
@@ -832,6 +887,8 @@ class BaseInterpreter:
         self.variables = {}
         self.windows = {}
         self.structures = {}
+        self._user_functions = {}
+        self._call_depth = 0
 
         for key, value in input_data.items():
             state[key] = value
@@ -844,7 +901,12 @@ class BaseInterpreter:
                     state[key] = value
 
         commands = []
-        self._generate_commands(algorithm_definition, state, settings, commands)
+        self._exec_settings = settings
+        self._exec_commands = commands
+        try:
+            self._generate_commands(algorithm_definition, state, settings, commands)
+        except _ReturnValue:
+            raise ValueError("'return' вне функции")
         return {'commands': commands, 'snapshots': self._snapshots}
 
     def _generate_commands(self, algorithm_definition, state, settings, commands):

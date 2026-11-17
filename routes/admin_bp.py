@@ -4,13 +4,14 @@ from utils.auth import login_required
 from flask_security import current_user
 from data.db import db
 from data.__all_models import User, Role, Algorithm
+from data.category import Category
+from sqlalchemy import func
 import os
 import psutil
 import platform
 import sqlite3
 from datetime import datetime
 from forms.algorithm import AlgorithmForm
-from visualization.python_to_low import generate_low_level_from_python
 import json
 from utils.slugify import slugify
 
@@ -63,7 +64,15 @@ def admin_dashboard():
 
     # Списки для таблиц
     users = User.query.all()
-    algorithms = Algorithm.query.order_by(Algorithm.order_index).all()
+    algorithms = (
+        Algorithm.query
+        .outerjoin(Category, Algorithm.category_id == Category.id)
+        .order_by(
+            func.coalesce(Category.order_index, 0),
+            func.coalesce(Algorithm.order_index, 0),
+        )
+        .all()
+    )
 
     return render_template(
         'admin/dashboard.html',
@@ -110,11 +119,11 @@ def add_algorithm():
 
             if form.definition_mode.data == 'python':
                 python_code = form.definition_python.data
-                # Передаём default_input_data и default_settings как пример
-                input_data = json.loads(form.default_input_data.data) if form.default_input_data.data else {}
-                settings = json.loads(form.default_settings.data) if form.default_settings.data else {}
-                definition = generate_low_level_from_python(python_code, input_data, settings)
-                algorithm.definition = definition
+                # Трансляция уже выполнена в validate_definition_python
+                # (форма), результат сохранён в form._translated_definition.
+                # Ошибки — уже во flash и form.definition_python.errors,
+                # повторять не нужно.
+                algorithm.definition = form.translated_definition
                 algorithm.definition_python = python_code
             else:
                 definition = {
@@ -180,10 +189,11 @@ def edit_algorithm(algorithm_id):
 
             if form.definition_mode.data == 'python':
                 python_code = form.definition_python.data
-                input_data = json.loads(form.default_input_data.data) if form.default_input_data.data else {}
-                settings = json.loads(form.default_settings.data) if form.default_settings.data else {}
-                definition = generate_low_level_from_python(python_code, input_data, settings)
-                algorithm.definition = definition
+                # Трансляция уже выполнена в validate_definition_python
+                # (форма), результат сохранён в form._translated_definition.
+                # Ошибки — уже во flash и form.definition_python.errors,
+                # повторять не нужно.
+                algorithm.definition = form.translated_definition
                 algorithm.definition_python = python_code
             else:
                 definition = {
