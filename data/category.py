@@ -22,7 +22,7 @@ def init_categories():
         {'id': 'string', 'name': 'String Algorithms', 'display_name': 'Строковые алгоритмы', 'order_index': 60},
         {'id': 'dynamics', 'name': 'Dynamic Programming', 'display_name': 'Динамическое программирование', 'order_index': 70},
         {'id': '2d-dynamics', 'name': '2D Dynamic Programming', 'display_name': 'Двумерная динамика', 'order_index': 80},
-        {'id': 'tests', 'name': 'Тестирование', 'display_name': 'Тесты', 'order_index': 110}
+        {'id': 'tests', 'name': 'Тестирование', 'display_name': 'Тесты', 'order_index': 200}
     ]
 
     for cat_data in categories:

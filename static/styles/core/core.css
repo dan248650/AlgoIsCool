@@ -1,5 +1,109 @@
 /* core.css - базовые стили и общие компоненты */
 
+/* ============================ Design tokens ============================ */
+:root {
+    /* ===== Фон ===== */
+    --bg-fallback: #1a2040;
+    --bg-overlay: rgba(14, 14, 37, 0.4);
+
+    /* ===== Поверхности ===== */
+    --bg-card-item: rgba(255, 255, 255, 0.50);
+    --input-bg: rgba(255, 255, 255, 0.78);
+    --option-bg: #dbeafe;
+    --help-button-bg: rgba(255, 255, 255, 0.10);
+    --help-button-bg-hover: rgba(255, 255, 255, 0.20);
+    --bg-surface-solid: rgba(248, 250, 252, 0.94);
+
+    /* ===== Стеклянные градиенты ===== */
+    --glass-gradient: linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.80) 0%,
+        rgba(219, 234, 254, 0.58) 100%
+    );
+    --glass-gradient-hover: linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.92) 0%,
+        rgba(219, 234, 254, 0.72) 100%
+    );
+
+    /* ===== Акценты ===== */
+    --accent-primary: #3b82f6;
+    --accent-secondary: #1d4ed8;
+    --accent-light: #a5c9ff;
+    --accent-glow: rgba(59, 130, 246, 0.45);
+    --accent-hover-glow: rgba(37, 99, 235, 0.22);
+
+    /* ===== Текст ===== */
+    --text-on-bg: #ffffff;
+    --text-on-bg-muted: #dbeafe;
+    --text-main: #172554;
+    --text-muted: #475569;
+    --text-on-accent: #ffffff;
+
+    /* ===== Рамки ===== */
+    --border-subtle: rgba(147, 197, 253, 0.35);
+    --border-hover: rgba(147, 197, 253, 0.6);
+    --border-on-accent: rgba(255, 255, 255, 0.25);
+
+    /* ===== Базовые тени ===== */
+    --shadow-contact: rgba(13, 19, 58, 0.10);
+    --shadow-ambient: rgba(13, 19, 58, 0.20);
+    --shadow-ambient-strong: rgba(13, 19, 58, 0.28);
+    --shadow-highlight: rgba(255, 255, 255, 0.75);
+    --shadow-highlight-strong: rgba(255, 255, 255, 0.9);
+    --shadow-lowlight: rgba(13, 19, 58, 0.08);
+    --shadow-title: rgba(13, 19, 58, 0.50);
+
+    /* ===== Многослойные тени ===== */
+    --shadow-card:
+        0 1px 2px var(--shadow-contact),
+        0 6px 20px var(--shadow-ambient),
+        inset 0 1px 0 var(--shadow-highlight),
+        inset 0 -1px 0 var(--shadow-lowlight);
+    --shadow-card-hover:
+        0 3px 6px var(--shadow-contact),
+        0 12px 28px var(--accent-hover-glow),
+        0 4px 12px var(--shadow-ambient),
+        inset 0 1px 0 var(--shadow-highlight-strong),
+        inset 0 -1px 0 var(--shadow-lowlight);
+
+    --shadow-float:
+        0 4px 8px var(--shadow-contact),
+        0 12px 28px var(--shadow-ambient-strong),
+        inset 0 1px 0 var(--shadow-highlight);
+
+    --shadow-btn:
+        0 1px 2px var(--shadow-contact),
+        0 3px 10px rgba(13, 19, 58, 0.12),
+        inset 0 1px 0 var(--shadow-highlight),
+        inset 0 -1px 0 var(--shadow-lowlight);
+    --shadow-btn-hover:
+        0 2px 4px var(--shadow-contact),
+        0 6px 16px rgba(37, 99, 235, 0.22),
+        inset 0 1px 0 var(--shadow-highlight-strong),
+        inset 0 -1px 0 var(--shadow-lowlight);
+    --shadow-btn-active:
+        inset 0 2px 4px rgba(13, 19, 58, 0.18),
+        inset 0 1px 0 rgba(13, 19, 58, 0.06);
+
+    --shadow-accent:
+        0 4px 12px rgba(37, 99, 235, 0.30),
+        0 8px 20px rgba(37, 99, 235, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        inset 0 -2px 4px rgba(13, 19, 58, 0.20);
+    --shadow-accent-hover:
+        0 6px 16px rgba(37, 99, 235, 0.45),
+        0 12px 28px var(--accent-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -2px 4px rgba(13, 19, 58, 0.20);
+
+    /* ===== Тайминги и фокус ===== */
+    --transition: 0.3s ease;
+    --transition-fast: 0.2s ease;
+    --focus-ring: 0 0 0 3px rgba(147, 197, 253, 0.55);
+}
+
+/* ============================ База ============================ */
 * {
     margin: 0;
     padding: 0;
