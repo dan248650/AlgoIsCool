@@ -1,0 +1,86 @@
+id: knapsack
+name: 0/1 Knapsack
+display_name: Задача о рюкзаке (0/1)
+category_id: 2d-dynamics
+description_short: Максимум ценности при ограничении по весу
+description_full: 'dp[i][w] — максимум ценности, используя первые i предметов и вместимость w. Если предмет
+  i-1 влезает: max(взять, не взять). Иначе — только не взять.'
+complexity: O(n·W)
+icon: 🎒
+order_index: 122
+default_input_data:
+  input_weights:
+  - 2
+  - 3
+  - 4
+  input_values:
+  - 3
+  - 4
+  - 5
+  capacity: 6
+input_schema:
+  input_weights:
+    type: array
+    constraints:
+      min_length: 2
+      max_length: 8
+      min_value: 1
+      max_value: 5
+      label: Веса
+  input_values:
+    type: array
+    constraints:
+      min_value: 1
+      max_value: 10
+      label: Ценности
+    depends_on:
+      field: input_weights
+      mode: same_length
+  capacity:
+    type: number
+    constraints:
+      min: 1
+      nonnegative: true
+      label: Вместимость
+    depends_on:
+      field: input_weights
+      mode: sum_scaled
+      ratio: 0.7
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  weights = Vector(input_weights)
+  values = Vector(input_values)
+  n = len(input_weights)
+  C = capacity
+  dp = Table(rows=n + 1, cols=C + 1, default=0)
+  w.attach(weights)
+  w.attach(values)
+  w.attach(dp)
+  wait(500)
+
+  for i in range(1, n + 1):
+      weights.highlight(i - 1, "yellow")
+      values.highlight(i - 1, "yellow")
+      wait(300)
+      for cap in range(0, C + 1):
+          dp.highlight_cell(i - 1, cap, "cyan")
+          if input_weights[i - 1] <= cap:
+              take = dp.get(i - 1, cap - input_weights[i - 1]) + input_values[i - 1]
+              skip = dp.get(i - 1, cap)
+              if take > skip:
+                  dp.set(i, cap, take)
+                  dp.highlight_cell(i, cap, "green")
+              else:
+                  dp.set(i, cap, skip)
+                  dp.highlight_cell(i, cap, "orange")
+          else:
+              dp.set(i, cap, dp.get(i - 1, cap))
+              dp.highlight_cell(i, cap, "orange")
+          wait(200)
+          dp.unhighlight_cell(i - 1, cap)
+          dp.unhighlight_cell(i, cap)
+      weights.unhighlight(i - 1)
+      values.unhighlight(i - 1)

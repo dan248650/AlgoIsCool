@@ -1,0 +1,113 @@
+id: kmp
+name: KMP
+display_name: Поиск подстроки (KMP)
+category_id: string
+description_short: Поиск подстроки через prefix-функцию паттерна
+description_full: 'Сначала строится pi-функция для паттерна. Затем паттерн «скользит» по тексту: при несовпадении
+  j откатывается по pi, а не на начало. Три структуры: text, pattern, pi.'
+complexity: O(n + m)
+icon: KMP
+order_index: 103
+default_input_data:
+  input_text: abcabcabd
+  input_pattern: abcab
+input_schema:
+  input_text:
+    type: string
+    constraints:
+      min_length: 8
+      max_length: 14
+      alphabet: abcd
+  input_pattern:
+    type: string
+    constraints:
+      min_length: 3
+      max_length: 6
+      alphabet: abcd
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  text = Vector(input_text)
+  pattern = Vector(input_pattern)
+  pi = Vector([])
+  w.attach(text)
+  w.attach(pattern)
+  w.attach(pi)
+  n = len(input_text)
+  m = len(input_pattern)
+  for k in range(m):
+      pi.append(0)
+  wait(400)
+
+  for i in range(1, m):
+      pattern.highlight(i, "yellow")
+      pi.highlight(i - 1, "cyan")
+      wait(300)
+      j = pi.value_at(i - 1)
+      while j > 0:
+          pattern.highlight(j, "orange")
+          wait(200)
+          if pattern.value_at(i) == pattern.value_at(j):
+              pattern.highlight(i, "green")
+              pattern.highlight(j, "green")
+              wait(300)
+              pattern.unhighlight(j)
+              break
+          pattern.highlight(i, "red")
+          pattern.highlight(j, "red")
+          wait(200)
+          pattern.unhighlight(j)
+          pattern.highlight(i, "yellow")
+          pi.highlight(j - 1, "red")
+          wait(200)
+          pi.unhighlight(j - 1)
+          j = pi.value_at(j - 1)
+      pi.unhighlight(i - 1)
+      if pattern.value_at(i) == pattern.value_at(j):
+          j = j + 1
+      pi.set(i, j)
+      pi.highlight(i, "green")
+      pattern.unhighlight(i)
+      wait(300)
+      pi.unhighlight(i)
+
+  j = 0
+  for i in range(n):
+      text.highlight(i, "yellow")
+      wait(250)
+      while j > 0:
+          if text.value_at(i) == pattern.value_at(j):
+              break
+          for s2 in range(m):
+              pattern.unhighlight(s2)
+          pattern.highlight(j - 1, "red")
+          pi.highlight(j - 1, "red")
+          wait(300)
+          pattern.unhighlight(j - 1)
+          pi.unhighlight(j - 1)
+          j = pi.value_at(j - 1)
+          for s2 in range(j):
+              pattern.highlight(s2, "green")
+          wait(200)
+      if text.value_at(i) == pattern.value_at(j):
+          pattern.highlight(j, "green")
+          j = j + 1
+      else:
+          for s2 in range(m):
+              pattern.unhighlight(s2)
+      text.unhighlight(i)
+      if j == m:
+          for s2 in range(m):
+              text.highlight(i - m + 1 + s2, "green")
+          wait(500)
+          j = pi.value_at(m - 1)
+          for s2 in range(m):
+              pattern.unhighlight(s2)
+          for s2 in range(j):
+              pattern.highlight(s2, "green")
+      wait(150)
+
+  for s2 in range(m):
+      pattern.unhighlight(s2)

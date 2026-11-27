@@ -1,0 +1,63 @@
+id: nearest-smaller-left
+name: Nearest smaller to left
+display_name: Ближайший меньший слева
+category_id: linear
+description_short: 'Монотонный стек: для каждого элемента найти ближайший меньший слева'
+description_full: Для каждого arr[i] ищем индекс ближайшего j < i с arr[j] < arr[i] (или -1). Стек (второе
+  окно) хранит индексы возрастающих элементов; перед добавлением нового чистим от элементов >= arr[i].
+  Результат (третье окно) — ответы по каждому индексу.
+complexity: O(n)
+icon: stack
+order_index: 80
+default_input_data:
+  input_array:
+  - 3
+  - 1
+  - 4
+  - 1
+  - 5
+  - 9
+  - 2
+  - 6
+input_schema:
+  input_array:
+    type: array
+    constraints:
+      min_length: 3
+      max_length: 12
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w1 = Window("input")
+  w2 = Window("stack")
+  w3 = Window("result")
+  arr = Vector(input_array)
+  st = Vector([])
+  res = Vector([])
+  w1.attach(arr)
+  w2.attach(st)
+  w3.attach(res)
+  wait(500)
+
+  for i in range(len(input_array)):
+      arr.highlight(i, "yellow")
+      wait(400)
+      while st.size() > 0:
+          top = st.value_at(st.size() - 1)
+          if input_array[top] >= input_array[i]:
+              st.pop()
+              wait(200)
+              continue
+          break
+      if st.size() == 0:
+          res.append(-1)
+          res.highlight(i, "red")
+      else:
+          top = st.value_at(st.size() - 1)
+          res.append(top)
+          res.highlight(i, "green")
+      st.append(i)
+      arr.unhighlight(i)
+      wait(300)
+      res.unhighlight(i)

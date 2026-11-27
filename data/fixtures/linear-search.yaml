@@ -1,0 +1,41 @@
+id: linear-search
+name: Линейный поиск
+display_name: Линейный поиск
+category_id: search
+description_short: Последовательный перебор элементов
+description_full: Линейный поиск — алгоритм, который последовательно проверяет каждый элемент массива,
+  пока не найдет искомый или не дойдет до конца.
+complexity: O(n)
+icon: linear
+order_index: 10
+default_input_data:
+  input_array:
+  - 64
+  - 34
+  - 25
+  - 12
+  - 22
+  - 11
+  - 90
+  target: 22
+input_schema:
+  input_array: array
+  target: number
+default_settings:
+  speed_factor: 1.0
+  colors:
+    current: '#FFA07A'
+    found: '#4CAF50'
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  v = Vector(input_array)
+  w.attach(v)
+
+  for i in range(len(input_array)):
+      v.highlight(i, "orange")
+      if input_array[i] == target:
+          v.highlight(i, "green")
+          wait(600)
+          break
+      v.unhighlight(i)

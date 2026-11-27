@@ -1,0 +1,78 @@
+id: bst-build
+name: Построение BST
+display_name: Построение двоичного дерева поиска
+category_id: tree
+description_short: Построение бинарного дерева поиска из массива
+description_full: 'Каждый элемент массива вставляется в BST по правилу: меньше — налево, больше — направо,
+  дубликат — направо. Дерево растёт и перестраивается автоматически.'
+complexity: O(n log n) в среднем
+icon: tree
+order_index: 50
+default_input_data:
+  input_array:
+  - 50
+  - 30
+  - 70
+  - 20
+  - 40
+  - 60
+  - 80
+  - 35
+  - 45
+input_schema:
+  input_array: array
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  root_id = input_array[0]
+  root_node = {"id": root_id, "label": str(root_id)}
+  t = Tree(nodes=[root_node], edges=[], root_id=root_id, layout="hierarchical")
+  w.attach(t)
+  t.highlight_node(root_id, "green")
+  wait(300)
+
+  for i in range(1, len(input_array)):
+      value = input_array[i]
+      current = root_id
+      while True:
+          t.highlight_node(current, "yellow")
+          wait(200)
+          cv = t.value_of(current)
+          children = t.children_of(current)
+          if value < cv:
+              if len(children) > 0:
+                  if t.value_of(children[0]) < cv:
+                      t.unhighlight_node(current)
+                      current = children[0]
+                      continue
+              t.add_child(current, value, str(value))
+              t.highlight_node(t.children_of(current)[0], "green")
+              t.unhighlight_node(current)
+              wait(300)
+              break
+          elif value > cv:
+              if len(children) > 0:
+                  last = children[-1]
+                  if t.value_of(last) > cv:
+                      t.unhighlight_node(current)
+                      current = last
+                      continue
+              t.add_child(current, value, str(value))
+              t.highlight_node(t.children_of(current)[-1], "green")
+              t.unhighlight_node(current)
+              wait(300)
+              break
+          else:
+              if len(children) > 0:
+                  last = children[-1]
+                  if t.value_of(last) >= cv:
+                      t.unhighlight_node(current)
+                      current = last
+                      continue
+              t.add_child(current, value, str(value))
+              t.highlight_node(t.children_of(current)[-1], "green")
+              t.unhighlight_node(current)
+              wait(300)
+              break

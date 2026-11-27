@@ -1,0 +1,62 @@
+id: matrix-chain
+name: Matrix chain multiplication
+display_name: Порядок перемножения матриц
+category_id: 2d-dynamics
+description_short: Минимум скалярных умножений при разной расстановке скобок
+description_full: dims[i]..dims[i+1] — размеры матрицы i. dp[i][j] — минимум умножений для матриц i..j.
+  Перебираем k — точку разделения. cost = dp[i][k] + dp[k+1][j] + dims[i]·dims[k+1]·dims[j+1].
+complexity: O(n³)
+icon: ×
+order_index: 123
+default_input_data:
+  input_dimensions:
+  - 10
+  - 30
+  - 5
+  - 60
+input_schema:
+  input_dimensions:
+    type: array
+    constraints:
+      min_length: 4
+      max_length: 6
+      min_value: 1
+      max_value: 99
+      label: Размеры
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  dims = Vector(input_dimensions)
+  n = len(input_dimensions) - 1
+  dp = Table(rows=n, cols=n, default=0)
+  w.attach(dims)
+  w.attach(dp)
+  wait(500)
+
+  for L in range(2, n + 1):
+      for i in range(0, n - L + 1):
+          j = i + L - 1
+          dp.highlight_cell(i, j, "yellow")
+          wait(200)
+          best = 1000000000
+          best_k = i
+          for k in range(i, j):
+              dims.highlight(k, "cyan")
+              dims.highlight(k + 1, "cyan")
+              dp.highlight_cell(i, k, "orange")
+              dp.highlight_cell(k + 1, j, "orange")
+              cost = dp.get(i, k) + dp.get(k + 1, j) + input_dimensions[i] * input_dimensions[k + 1] * input_dimensions[j + 1]
+              if cost < best:
+                  best = cost
+                  best_k = k
+              wait(300)
+              dims.unhighlight(k)
+              dims.unhighlight(k + 1)
+              dp.unhighlight_cell(i, k)
+              dp.unhighlight_cell(k + 1, j)
+          dp.set(i, j, best)
+          dp.highlight_cell(i, j, "green")
+          wait(400)
+          dp.unhighlight_cell(i, j)

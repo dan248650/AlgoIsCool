@@ -1,0 +1,74 @@
+id: prefix-function
+name: Prefix function
+display_name: Prefix-функция (KMP)
+category_id: string
+description_short: Массив длин наибольших собственных префиксов-суффиксов
+description_full: pi[i] — длина наибольшего префикса строки s, который одновременно является суффиксом
+  подстроки s[0..i]. Строится за O(n) с использованием уже посчитанных pi.
+complexity: O(n)
+icon: π
+order_index: 100
+default_input_data:
+  input_string: abacaba
+input_schema:
+  input_string:
+    type: string
+    constraints:
+      min_length: 5
+      max_length: 12
+      alphabet: ab
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  s = Vector(input_string)
+  pi = Vector([])
+  w.attach(s)
+  w.attach(pi)
+  n = len(input_string)
+  for k in range(n):
+      pi.append(0)
+  wait(500)
+
+  for i in range(1, n):
+      s.highlight(i, "yellow")
+      pi.highlight(i - 1, "cyan")
+      wait(400)
+      j = pi.value_at(i - 1)
+
+      while j > 0:
+          s.highlight(j, "orange")
+          wait(300)
+          if s.value_at(i) == s.value_at(j):
+              break
+          s.highlight(i, "red")
+          s.highlight(j, "red")
+          wait(300)
+          s.unhighlight(j)
+          s.highlight(i, "yellow")
+          pi.highlight(j - 1, "red")
+          wait(300)
+          pi.unhighlight(j - 1)
+          j = pi.value_at(j - 1)
+      pi.unhighlight(i - 1)
+
+      s.highlight(j, "orange")
+      wait(200)
+      if s.value_at(i) == s.value_at(j):
+          s.highlight(i, "green")
+          s.highlight(j, "green")
+          wait(400)
+          s.unhighlight(j)
+          j = j + 1
+      else:
+          s.highlight(i, "red")
+          s.highlight(j, "red")
+          wait(300)
+          s.unhighlight(j)
+      s.unhighlight(i)
+
+      pi.set(i, j)
+      pi.highlight(i, "green")
+      wait(400)
+      pi.unhighlight(i)

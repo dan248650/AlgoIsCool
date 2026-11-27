@@ -1,0 +1,78 @@
+id: manacher
+name: Manacher
+display_name: Алгоритм Манакера
+category_id: string
+description_short: Радиусы всех нечётных палиндромов за линейное время
+description_full: d1[i] — количество нечётных палиндромов с центром в i. Использует уже известный блок
+  [l, r) самого правого палиндрома для ускорения.
+complexity: O(n)
+icon: ◯
+order_index: 102
+default_input_data:
+  input_string: abacabadabacaba
+input_schema:
+  input_string:
+    type: string
+    constraints:
+      min_length: 5
+      max_length: 15
+      alphabet: abcd
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  s = Vector(input_string)
+  d1 = Vector([])
+  w.attach(s)
+  w.attach(d1)
+  n = len(input_string)
+  for k in range(n):
+      d1.append(0)
+  wait(500)
+
+  l = 0
+  r = -1
+  for i in range(n):
+      s.highlight(i, "yellow")
+      wait(400)
+
+      if i > r:
+          k = 1
+      else:
+          sym = l + r - i
+          s.highlight(sym, "cyan")
+          d1.highlight(sym, "cyan")
+          wait(300)
+          k = d1.value_at(sym)
+          if r - i + 1 < k:
+              k = r - i + 1
+          s.unhighlight(sym)
+          d1.unhighlight(sym)
+
+      while i + k < n and i - k >= 0:
+          s.highlight(i - k, "orange")
+          s.highlight(i + k, "orange")
+          wait(300)
+          if s.value_at(i - k) != s.value_at(i + k):
+              s.highlight(i - k, "red")
+              s.highlight(i + k, "red")
+              wait(300)
+              s.unhighlight(i - k)
+              s.unhighlight(i + k)
+              break
+          s.highlight(i - k, "green")
+          s.highlight(i + k, "green")
+          wait(300)
+          s.unhighlight(i - k)
+          s.unhighlight(i + k)
+          k = k + 1
+
+      d1.set(i, k)
+      if i + k - 1 > r:
+          l = i - k + 1
+          r = i + k - 1
+      d1.highlight(i, "green")
+      s.unhighlight(i)
+      wait(400)
+      d1.unhighlight(i)

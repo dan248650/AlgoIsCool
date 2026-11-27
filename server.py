@@ -7,43 +7,8 @@ from config import Config
 
 # Импортируем модели и БД
 from data.db import db
-from data.algorithm import (
-    Algorithm,
-    add_linear_search,
-    add_bubble_sort,
-    add_bfs,
-    add_dfs,
-    add_kadane,
-    add_bst_build,
-    add_bst_search,
-    add_tree_bfs,
-    add_prefix_sums,
-    add_suffix_sums,
-    add_nearest_smaller_left,
-    add_boyer_moore_majority,
-    add_trapping_rain_water,
-    add_prefix_function,
-    add_z_function,
-    add_manacher,
-    add_kmp,
-    add_boyer_moore,
-    add_lis,
-    add_coin_change,
-    add_house_robber,
-    add_max_product_subarray,
-    add_jump_game,
-    add_lcs,
-    add_edit_distance,
-    add_knapsack,
-    add_matrix_chain,
-    add_lps,
-    add_matrix_multiplication,
-    add_flood_fill,
-    add_game_of_life,
-    add_count_islands,
-    add_prefix_sums_2d,
-)
 from data.category import init_categories
+from data.fixtures import init_algorithms
 
 # Импортируем маршруты
 from routes import register_blueprints
@@ -76,12 +41,12 @@ def create_app(config_class=Config):
         db.create_all()
         app.logger.info("Database initialized")
 
+        init_categories()
+        app.logger.info("Category added")
+
         # Заполняем алгоритмы (создаём или обновляем)
         init_algorithms()
         app.logger.info("Algorithms initialized/updated")
-
-        init_categories()
-        app.logger.info("Category added")
 
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
     security = Security(app, user_datastore, register_blueprint=False)
@@ -97,58 +62,6 @@ def create_app(config_class=Config):
         return dict(current_user=current_user)
 
     return app
-
-
-def init_algorithms():
-    """Создаёт или обновляет записи алгоритмов."""
-    def update_or_create(algo_func):
-        new_algo = algo_func()
-        existing = Algorithm.query.get(new_algo.id)
-        if existing:
-            # обновляем поля
-            for key in ['name', 'display_name', 'category_id', 'description_short',
-                        'description_full', 'complexity', 'icon', 'order_index',
-                        'default_input_data', 'definition', 'input_schema',
-                        'default_settings', 'definition_python', 'definition_mode']:
-                setattr(existing, key, getattr(new_algo, key))
-            db.session.add(existing)
-        else:
-            db.session.add(new_algo)
-
-    update_or_create(add_linear_search)
-    update_or_create(add_bubble_sort)
-    update_or_create(add_bfs)
-    update_or_create(add_dfs)
-    update_or_create(add_kadane)
-    update_or_create(add_bst_build)
-    update_or_create(add_bst_search)
-    update_or_create(add_tree_bfs)
-    update_or_create(add_prefix_sums)
-    update_or_create(add_suffix_sums)
-    update_or_create(add_nearest_smaller_left)
-    update_or_create(add_boyer_moore_majority)
-    update_or_create(add_trapping_rain_water)
-    update_or_create(add_prefix_function)
-    update_or_create(add_z_function)
-    update_or_create(add_manacher)
-    update_or_create(add_kmp)
-    update_or_create(add_boyer_moore)
-    update_or_create(add_lis)
-    update_or_create(add_coin_change)
-    update_or_create(add_house_robber)
-    update_or_create(add_max_product_subarray)
-    update_or_create(add_jump_game)
-    update_or_create(add_lcs)
-    update_or_create(add_edit_distance)
-    update_or_create(add_knapsack)
-    update_or_create(add_matrix_chain)
-    update_or_create(add_lps)
-    update_or_create(add_matrix_multiplication)
-    update_or_create(add_flood_fill)
-    update_or_create(add_game_of_life)
-    update_or_create(add_count_islands)
-    update_or_create(add_prefix_sums_2d)
-    db.session.commit()
 
 
 def init_database():

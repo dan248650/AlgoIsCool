@@ -1,0 +1,65 @@
+id: lis
+name: Longest Increasing Subsequence
+display_name: Наибольшая возрастающая подпоследовательность (LIS)
+category_id: dynamics
+description_short: 'dp[i] = 1 + max(dp[j] : j<i, a[j]<a[i])'
+description_full: Для каждого i проходим по всем j < i, где input_array[j] < input_array[i]. dp[i] — наибольшая
+  длина возрастающей подпоследовательности, заканчивающейся на i. Ответ = max(dp).
+complexity: O(n²)
+icon: LIS
+order_index: 110
+default_input_data:
+  input_array:
+  - 10
+  - 9
+  - 2
+  - 5
+  - 3
+  - 7
+  - 27
+  - 18
+input_schema:
+  input_array:
+    type: array
+    constraints:
+      min_length: 5
+      max_length: 9
+      min_value: 1
+      max_value: 30
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  arr = Vector(input_array)
+  dp = Vector([])
+  w.attach(arr)
+  w.attach(dp)
+  n = len(input_array)
+  for k in range(n):
+      dp.append(1)
+  wait(500)
+
+  for i in range(0, n):
+      arr.highlight(i, "yellow")
+      dp.highlight(i, "yellow")
+      wait(300)
+      best = 0
+      for j in range(0, i):
+          arr.highlight(j, "orange")
+          dp.highlight(j, "cyan")
+          wait(200)
+          if input_array[j] < input_array[i]:
+              arr.highlight(j, "green")
+              if dp.value_at(j) > best:
+                  best = dp.value_at(j)
+          else:
+              arr.highlight(j, "red")
+          wait(200)
+          arr.unhighlight(j)
+          dp.unhighlight(j)
+      dp.set(i, best + 1)
+      dp.highlight(i, "green")
+      arr.unhighlight(i)
+      wait(300)
+      dp.unhighlight(i)

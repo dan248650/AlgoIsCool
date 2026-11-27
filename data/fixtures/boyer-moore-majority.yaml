@@ -1,0 +1,68 @@
+id: boyer-moore-majority
+name: Boyer-Moore majority vote
+display_name: Поиск мажоритарного элемента (Boyer-Moore)
+category_id: linear
+description_short: 'Кандидат + счётчик: большинство найдено за один проход'
+description_full: 'Классический трюк: держим кандидата и счётчик. При cnt = 0 меняем кандидата; при совпадении
+  cnt+1, иначе cnt-1. В конце проверяем, действительно ли кандидат — мажоритарный (встречается больше
+  n/2 раз). Второе окно показывает текущего кандидата и счётчик.'
+complexity: O(n)
+icon: vote
+order_index: 85
+default_input_data:
+  input_array:
+  - 2
+  - 2
+  - 1
+  - 1
+  - 1
+  - 2
+  - 2
+input_schema:
+  input_array:
+    type: array
+    constraints:
+      min_length: 3
+      max_length: 13
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w1 = Window("array")
+  w2 = Window("state")
+  arr = Vector(input_array)
+  state = Vector([0, 0])
+  w1.attach(arr)
+  w2.attach(state)
+  wait(500)
+
+  for i in range(len(input_array)):
+      arr.highlight(i, "yellow")
+      wait(300)
+      cand = state.value_at(0)
+      cnt = state.value_at(1)
+      if cnt == 0:
+          state.set(0, input_array[i])
+          state.set(1, 1)
+      elif input_array[i] == cand:
+          state.set(1, cnt + 1)
+      else:
+          state.set(1, cnt - 1)
+      arr.unhighlight(i)
+      wait(200)
+
+  cand = state.value_at(0)
+  final_count = 0
+  for i in range(len(input_array)):
+      if input_array[i] == cand:
+          final_count = final_count + 1
+
+  if final_count * 2 > len(input_array):
+      for i in range(len(input_array)):
+          if input_array[i] == cand:
+              arr.highlight(i, "green")
+  else:
+      for i in range(len(input_array)):
+          if input_array[i] == cand:
+              arr.highlight(i, "red")
+  wait(1000)

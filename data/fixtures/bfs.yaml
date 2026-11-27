@@ -1,0 +1,62 @@
+id: bfs
+name: Поиск в ширину (BFS)
+display_name: Поиск в ширину (BFS)
+category_id: graph
+description_short: Обход графа в ширину
+description_full: Алгоритм обхода графа, который посещает все вершины в порядке увеличения расстояния
+  от стартовой вершины. Использует очередь.
+complexity: O(V + E)
+icon: bfs
+order_index: 30
+default_input_data:
+  nodes:
+  - label: A
+  - label: B
+  - label: C
+  - label: D
+  edges:
+  - from: 0
+    to: 1
+  - from: 1
+    to: 2
+  - from: 2
+    to: 3
+  directed: false
+  start_node: 0
+input_schema:
+  nodes: graph_nodes
+  edges:
+    type: graph_edges
+    depends_on: nodes
+  directed: boolean
+  start_node:
+    type: number
+    depends_on: nodes
+default_settings:
+  speed_factor: 1.0
+  layout: kamada_kawai
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  g = Graph(nodes=nodes, edges=edges, directed=directed)
+  w.attach(g)
+
+  visited = [start_node]
+  queue = [start_node]
+  g.highlight_node(start_node, "green")
+  wait(300)
+
+  while len(queue) > 0:
+      u = queue[0]
+      queue = queue[1:]
+      g.highlight_node(u, "orange")
+      wait(300)
+      for v in g.neighbors(u):
+          if v not in visited:
+              g.highlight_edge(u, v, "blue")
+              visited = visited + [v]
+              queue = queue + [v]
+              g.highlight_node(v, "green")
+              wait(300)
+      g.unhighlight_node(u)
+      wait(200)

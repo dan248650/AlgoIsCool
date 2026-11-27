@@ -1,0 +1,78 @@
+id: edit-distance
+name: Edit distance
+display_name: Расстояние редактирования (Левенштейн)
+category_id: 2d-dynamics
+description_short: Минимум операций insert/delete/replace
+description_full: dp[i][j] — минимум операций, чтобы превратить s1[0..i-1] в s2[0..j-1]. Совпало → dp[i-1][j-1].
+  Не совпало → min(diag, up, left) + 1 (replace, delete, insert).
+complexity: O(n·m)
+icon: edit
+order_index: 121
+default_input_data:
+  input_text1: kitten
+  input_text2: sitting
+input_schema:
+  input_text1:
+    type: string
+    constraints:
+      min_length: 4
+      max_length: 8
+      label: Исходная строка
+  input_text2:
+    type: string
+    constraints:
+      min_length: 4
+      max_length: 8
+      label: Целевая строка
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  s1 = Vector(input_text1)
+  s2 = Vector(input_text2)
+  n = len(input_text1)
+  m = len(input_text2)
+  dp = Table(rows=n + 1, cols=m + 1, default=0)
+  w.attach(s1)
+  w.attach(s2)
+  w.attach(dp)
+  wait(500)
+
+  for i in range(0, n + 1):
+      dp.set(i, 0, i)
+  for j in range(0, m + 1):
+      dp.set(0, j, j)
+  wait(400)
+
+  for i in range(1, n + 1):
+      for j in range(1, m + 1):
+          s1.highlight(i - 1, "yellow")
+          s2.highlight(j - 1, "yellow")
+          wait(150)
+          if s1.value_at(i - 1) == s2.value_at(j - 1):
+              dp.highlight_cell(i - 1, j - 1, "cyan")
+              val = dp.get(i - 1, j - 1)
+              dp.set(i, j, val)
+              dp.highlight_cell(i, j, "green")
+          else:
+              dp.highlight_cell(i - 1, j - 1, "cyan")
+              dp.highlight_cell(i - 1, j, "cyan")
+              dp.highlight_cell(i, j - 1, "cyan")
+              diag = dp.get(i - 1, j - 1) + 1
+              up = dp.get(i - 1, j) + 1
+              left = dp.get(i, j - 1) + 1
+              best = diag
+              if up < best:
+                  best = up
+              if left < best:
+                  best = left
+              dp.set(i, j, best)
+              dp.highlight_cell(i, j, "orange")
+          wait(300)
+          s1.unhighlight(i - 1)
+          s2.unhighlight(j - 1)
+          dp.unhighlight_cell(i - 1, j - 1)
+          dp.unhighlight_cell(i - 1, j)
+          dp.unhighlight_cell(i, j - 1)
+          dp.unhighlight_cell(i, j)

@@ -1,0 +1,78 @@
+id: coin-change
+name: Coin change
+display_name: Размен монет (минимум монет)
+category_id: dynamics
+description_short: 'dp[s] = min(dp[s-c]+1 : c <= s, dp[s-c] != -1)'
+description_full: 'dp[s] — минимальное число монет для суммы s. Для каждой суммы перебираем все монеты
+  c: если dp[s-c] достижима, кандидат = dp[s-c]+1. Ответ = dp[amount].'
+complexity: O(amount · n)
+icon: coin
+order_index: 111
+default_input_data:
+  input_coins:
+  - 1
+  - 2
+  - 5
+  amount: 11
+input_schema:
+  input_coins:
+    type: array
+    constraints:
+      min_length: 2
+      max_length: 4
+      min_value: 1
+      max_value: 10
+      label: Монеты
+  amount:
+    type: number
+    constraints:
+      min: 5
+      max: 15
+      nonnegative: true
+      label: Сумма
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  coins = Vector(input_coins)
+  dp = Vector([])
+  w.attach(coins)
+  w.attach(dp)
+  n = len(input_coins)
+  for k in range(amount + 1):
+      if k == 0:
+          dp.append(0)
+      else:
+          dp.append(-1)
+  wait(500)
+
+  for s in range(1, amount + 1):
+      dp.highlight(s, "yellow")
+      wait(300)
+      best = -1
+      for k in range(0, n):
+          c = input_coins[k]
+          coins.highlight(k, "orange")
+          wait(150)
+          if c <= s:
+              if dp.value_at(s - c) != -1:
+                  cand = dp.value_at(s - c) + 1
+                  dp.highlight(s - c, "cyan")
+                  wait(200)
+                  if best == -1 or cand < best:
+                      best = cand
+                      dp.highlight(s - c, "green")
+                  wait(150)
+                  dp.highlight(s - c, "yellow")
+          else:
+              coins.highlight(k, "red")
+          wait(150)
+          coins.unhighlight(k)
+      if best != -1:
+          dp.set(s, best)
+          dp.highlight(s, "green")
+      else:
+          dp.highlight(s, "red")
+      wait(300)
+      dp.unhighlight(s)

@@ -1,0 +1,64 @@
+id: dfs
+name: Поиск в глубину (DFS)
+display_name: Поиск в глубину (DFS)
+category_id: graph
+description_short: Обход графа в глубину
+description_full: Алгоритм обхода графа, который идёт вглубь по одному пути, используя стек.
+complexity: O(V + E)
+icon: dfs
+order_index: 35
+default_input_data:
+  nodes:
+  - label: A
+  - label: B
+  - label: C
+  - label: D
+  - label: E
+  edges:
+  - from: 0
+    to: 1
+  - from: 0
+    to: 2
+  - from: 1
+    to: 3
+  - from: 1
+    to: 4
+  directed: false
+  start_node: 0
+input_schema:
+  nodes: graph_nodes
+  edges:
+    type: graph_edges
+    depends_on: nodes
+  directed: boolean
+  start_node:
+    type: number
+    depends_on: nodes
+default_settings:
+  speed_factor: 1.0
+  layout: kamada_kawai
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  g = Graph(nodes=nodes, edges=edges, directed=directed)
+  w.attach(g)
+
+  visited = []
+  stack = [start_node]
+  g.highlight_node(start_node, "green")
+  wait(300)
+
+  while len(stack) > 0:
+      u = stack[-1]
+      stack = stack[:-1]
+      if u not in visited:
+          visited = visited + [u]
+          g.highlight_node(u, "orange")
+          wait(300)
+          for v in g.neighbors(u):
+              if v not in visited:
+                  g.highlight_edge(u, v, "blue")
+                  stack = stack + [v]
+                  wait(300)
+      g.unhighlight_node(u)
+      wait(200)

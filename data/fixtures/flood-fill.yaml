@@ -1,0 +1,197 @@
+id: flood-fill
+name: Flood fill
+display_name: Заливка области (Flood fill)
+category_id: search
+description_short: Смена цвета связной области через стек (DFS)
+description_full: 'Начинаем с клетки (start_r, start_c). Кладём её в стек. Пока стек не пуст: берём клетку,
+  если её цвет = old_color — красим в new_color и добавляем соседей в стек. Классика заливки (как в Paint).'
+complexity: O(N·M)
+icon: 🌊
+order_index: 131
+default_input_data:
+  input_matrix:
+  - - 0
+    - 0
+    - 0
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+  - - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 1
+    - 1
+  - - 0
+    - 0
+    - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 1
+    - 1
+  - - 0
+    - 0
+    - 0
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+  - - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 1
+    - 1
+    - 1
+  - - 1
+    - 1
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 1
+    - 1
+  - - 1
+    - 1
+    - 1
+    - 0
+    - 0
+    - 0
+    - 1
+    - 1
+    - 1
+  - - 1
+    - 0
+    - 0
+    - 1
+    - 0
+    - 1
+    - 1
+    - 0
+    - 1
+  - - 0
+    - 0
+    - 1
+    - 1
+    - 1
+    - 1
+    - 0
+    - 0
+    - 1
+  start_r: 0
+  start_c: 0
+  new_color: 2
+input_schema:
+  input_matrix:
+    type: table
+    constraints:
+      min_rows: 5
+      max_rows: 9
+      min_cols: 5
+      max_cols: 9
+      integer: true
+      min_value: 0
+      max_value: 5
+      label: Сетка
+  start_r:
+    type: number
+    constraints:
+      min: 0
+      max: 8
+      nonnegative: true
+      label: Стартовая строка
+  start_c:
+    type: number
+    constraints:
+      min: 0
+      max: 8
+      nonnegative: true
+      label: Стартовый столбец
+  new_color:
+    type: number
+    constraints:
+      min: 0
+      max: 9
+      nonnegative: true
+      label: Новый цвет
+default_settings:
+  speed_factor: 2.5
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  t = Table(input_matrix)
+  w.attach(t)
+  wait(500)
+
+  n_rows = t.rows()
+  n_cols = t.cols()
+  sr = start_r
+  sc = start_c
+  if sr < 0:
+      sr = 0
+  if sr >= n_rows:
+      sr = n_rows - 1
+  if sc < 0:
+      sc = 0
+  if sc >= n_cols:
+      sc = n_cols - 1
+
+  if t.get(sr, sc) == new_color:
+      found = False
+      for rr in range(0, n_rows):
+          if not found:
+              for cc in range(0, n_cols):
+                  if t.get(rr, cc) != new_color:
+                      sr = rr
+                      sc = cc
+                      found = True
+                      break
+
+  old_color = t.get(sr, sc)
+  if old_color == new_color:
+      wait(300)
+  else:
+      stack_r = Vector([])
+      stack_c = Vector([])
+      stack_r.append(sr)
+      stack_c.append(sc)
+      while stack_r.size() > 0:
+          ti = stack_r.size() - 1
+          r = stack_r.value_at(ti)
+          c = stack_c.value_at(ti)
+          stack_r.pop()
+          stack_c.pop()
+          if t.get(r, c) != old_color:
+              continue
+          t.set(r, c, new_color)
+          t.highlight_cell(r, c, "green")
+          wait(60)
+          if r > 0:
+              if t.get(r - 1, c) == old_color:
+                  stack_r.append(r - 1)
+                  stack_c.append(c)
+          if r < n_rows - 1:
+              if t.get(r + 1, c) == old_color:
+                  stack_r.append(r + 1)
+                  stack_c.append(c)
+          if c > 0:
+              if t.get(r, c - 1) == old_color:
+                  stack_r.append(r)
+                  stack_c.append(c - 1)
+          if c < n_cols - 1:
+              if t.get(r, c + 1) == old_color:
+                  stack_r.append(r)
+                  stack_c.append(c + 1)

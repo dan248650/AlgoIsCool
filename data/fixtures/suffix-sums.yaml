@@ -1,0 +1,48 @@
+id: suffix-sums
+name: Suffix sums
+display_name: Суффиксные суммы
+category_id: linear
+description_short: Растущий второй массив с суффиксными суммами
+description_full: arr — входной массив, suf — растущий массив суффиксных сумм. Обрабатываем справа налево;
+  каждая новая ячейка = сумма всех элементов от текущего до конца.
+complexity: O(n)
+icon: suffix
+order_index: 75
+default_input_data:
+  input_array:
+  - 1
+  - 3
+  - 2
+  - 5
+  - 4
+  - 6
+  - 2
+input_schema:
+  input_array:
+    type: array
+    constraints:
+      min_length: 3
+      max_length: 12
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  arr = Vector(input_array)
+  suf = Vector([])
+  w.attach(arr)
+  w.attach(suf)
+  wait(500)
+
+  total = 0
+  n = len(input_array)
+  for k in range(n):
+      i = n - 1 - k
+      arr.highlight(i, "yellow")
+      wait(400)
+      total = total + input_array[i]
+      suf.insert(0, total)
+      suf.highlight(0, "cyan")
+      arr.unhighlight(i)
+      wait(300)
+      suf.unhighlight(0)

@@ -1,0 +1,75 @@
+id: house-robber
+name: House robber
+display_name: Ограбление домов
+category_id: dynamics
+description_short: dp[i] = max(dp[i-1], dp[i-2] + a[i])
+description_full: Каждый дом содержит деньги. Нельзя грабить два соседних дома. dp[i] = максимум из «пропустить
+  i-й» (dp[i-1]) и «взять i-й» (dp[i-2] + a[i]).
+complexity: O(n)
+icon: 🏠
+order_index: 112
+default_input_data:
+  input_array:
+  - 2
+  - 7
+  - 9
+  - 3
+  - 1
+input_schema:
+  input_array:
+    type: array
+    constraints:
+      min_length: 4
+      max_length: 8
+      min_value: 1
+      max_value: 20
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  arr = Vector(input_array)
+  dp = Vector([])
+  w.attach(arr)
+  w.attach(dp)
+  n = len(input_array)
+  for k in range(n):
+      dp.append(0)
+  wait(500)
+
+  for i in range(0, n):
+      arr.highlight(i, "yellow")
+      if i == 0:
+          dp.set(0, input_array[0])
+          dp.highlight(0, "green")
+          wait(300)
+          dp.unhighlight(0)
+          arr.unhighlight(0)
+          continue
+      if i == 1:
+          if input_array[0] > input_array[1]:
+              dp.set(1, input_array[0])
+          else:
+              dp.set(1, input_array[1])
+          dp.highlight(1, "green")
+          wait(300)
+          dp.unhighlight(1)
+          arr.unhighlight(1)
+          continue
+      skip = dp.value_at(i - 1)
+      take = dp.value_at(i - 2) + input_array[i]
+      dp.highlight(i - 1, "cyan")
+      dp.highlight(i - 2, "orange")
+      wait(400)
+      if skip > take:
+          dp.set(i, skip)
+          dp.highlight(i - 1, "green")
+      else:
+          dp.set(i, take)
+          dp.highlight(i - 2, "green")
+      dp.highlight(i, "green")
+      wait(300)
+      dp.unhighlight(i - 1)
+      dp.unhighlight(i - 2)
+      dp.unhighlight(i)
+      arr.unhighlight(i)

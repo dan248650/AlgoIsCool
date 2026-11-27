@@ -1,0 +1,66 @@
+id: tree-bfs
+name: Обход дерева в ширину
+display_name: Обход дерева в ширину (BFS по дереву)
+category_id: tree
+description_short: Обход дерева по уровням
+description_full: 'BFS по иерархическому дереву: волна от корня вниз. Использует neighbors, который для
+  дерева возвращает только детей.'
+complexity: O(V)
+icon: tree
+order_index: 60
+default_input_data:
+  nodes:
+  - label: '1'
+  - label: '2'
+  - label: '3'
+  - label: '4'
+  - label: '5'
+  edges:
+  - from: 0
+    to: 1
+  - from: 0
+    to: 2
+  - from: 1
+    to: 3
+  - from: 1
+    to: 4
+  start_node: 0
+input_schema:
+  nodes: graph_nodes
+  edges:
+    type: graph_edges
+    depends_on: nodes
+    constraints:
+      no_cycles: true
+      connected: true
+  start_node:
+    type: number
+    depends_on: nodes
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  t = Tree(nodes=nodes, edges=edges, root_id=start_node,
+           layout="hierarchical")
+  w.attach(t)
+
+  visited = [start_node]
+  queue = [start_node]
+  t.highlight_node(start_node, "green")
+  wait(300)
+
+  while len(queue) > 0:
+      u = queue[0]
+      queue = queue[1:]
+      t.highlight_node(u, "orange")
+      wait(300)
+      for v in t.neighbors(u):
+          if v not in visited:
+              t.highlight_edge(u, v, "blue")
+              visited = visited + [v]
+              queue = queue + [v]
+              t.highlight_node(v, "green")
+              wait(300)
+      t.unhighlight_node(u)
+      wait(200)

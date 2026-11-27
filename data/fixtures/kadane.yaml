@@ -1,0 +1,67 @@
+id: kadane
+name: Максимальная сумма подотрезка
+display_name: Максимальная сумма подотрезка (Кадане)
+category_id: search
+description_short: Поиск подмассива с максимальной суммой
+description_full: 'Алгоритм Кадане: поддерживаем текущий подотрезок. Если сумма становится меньше текущего
+  элемента – начинаем новый отрезок.'
+complexity: O(n)
+icon: kadane
+order_index: 40
+default_input_data:
+  input_array:
+  - -2
+  - 1
+  - -3
+  - 4
+  - -1
+  - 2
+  - 1
+  - -5
+  - 4
+input_schema:
+  input_array: array
+default_settings:
+  speed_factor: 1.0
+  colors:
+    current_window: '#FFA07A'
+    max_subarray: '#4CAF50'
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  v = Vector(input_array)
+  w.attach(v)
+
+  n = len(input_array)
+  current_sum = 0
+  max_sum = -1000000000
+  start = 0
+  end = 0
+  temp_start = 0
+
+  if n > 0:
+      current_sum = input_array[0]
+      max_sum = input_array[0]
+
+  for i in range(1, n):
+      v.highlight(i, "yellow")
+      if current_sum + input_array[i] > input_array[i]:
+          current_sum = current_sum + input_array[i]
+      else:
+          current_sum = input_array[i]
+          temp_start = i
+      if current_sum > max_sum:
+          max_sum = current_sum
+          start = temp_start
+          end = i
+      if current_sum == max_sum:
+          for j in range(temp_start, i + 1):
+              v.highlight(j, "lightgreen")
+          wait(400)
+      for j in range(0, temp_start):
+          v.unhighlight(j)
+
+  for j in range(0, n):
+      v.unhighlight(j)
+  for j in range(start, end + 1):
+      v.highlight(j, "green")

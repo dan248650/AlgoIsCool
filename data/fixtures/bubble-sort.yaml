@@ -1,0 +1,46 @@
+id: bubble-sort
+name: Сортировка пузырьком
+display_name: Сортировка пузырьком
+category_id: sorting
+description_short: Попарное сравнение и обмен соседних элементов
+description_full: Сортировка пузырьком — простой алгоритм сортировки, который многократно проходит по
+  массиву, сравнивая соседние элементы и меняя их местами, если они стоят в неправильном порядке. Каждый
+  проход 'всплывает' наибольший элемент в конец массива.
+complexity: O(n²)
+icon: bubble
+order_index: 20
+default_input_data:
+  input_array:
+  - 64
+  - 34
+  - 25
+  - 12
+  - 22
+  - 11
+  - 90
+input_schema:
+  input_array: array
+default_settings:
+  speed_factor: 1.0
+  colors:
+    comparing: '#FFA07A'
+    swapping: '#FF6B6B'
+    sorted: '#4CAF50'
+    default: '#e0e0e0'
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  v = Vector(input_array)
+  w.attach(v)
+
+  n = len(input_array)
+  for i in range(n - 1):
+      for j in range(n - i - 1):
+          v.highlight([j, j + 1], "orange")
+          if input_array[j] > input_array[j + 1]:
+              v.highlight([j, j + 1], "red")
+              v.swap(j, j + 1)
+              input_array[j], input_array[j + 1] = input_array[j + 1], input_array[j]
+          v.unhighlight([j, j + 1])
+      v.highlight(n - i - 1, "green")
+  v.highlight(0, "green")

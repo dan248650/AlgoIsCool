@@ -1,0 +1,73 @@
+id: prefix-sums-2d
+name: 2D prefix sums
+display_name: Двумерные префиксные суммы
+category_id: search
+description_short: p[r][c] = сумма input[0..r-1][0..c-1] за O(1) на клетку
+description_full: p[i][j] = p[i-1][j] + p[i][j-1] - p[i-1][j-1] + input[i-1][j-1]. Каждая клетка результирующей
+  таблицы — сумма прямоугольника от (0,0) до (i-1,j-1). таблица t — исходная, p — префиксные суммы (размер
+  +1 к каждой стороне, нулевая строка и столбец для удобства).
+complexity: O(N·M)
+icon: Σ
+order_index: 134
+default_input_data:
+  input_matrix:
+  - - 1
+    - 2
+    - 3
+    - 4
+  - - 5
+    - 6
+    - 7
+    - 8
+  - - 9
+    - 10
+    - 11
+    - 12
+  - - 13
+    - 14
+    - 15
+    - 16
+input_schema:
+  input_matrix:
+    type: table
+    constraints:
+      min_rows: 3
+      max_rows: 6
+      min_cols: 3
+      max_cols: 6
+      integer: true
+      min_value: -20
+      max_value: 20
+      label: Матрица
+default_settings:
+  speed_factor: 2.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  t = Table(input_matrix)
+  n_rows = len(input_matrix)
+  n_cols = len(input_matrix[0])
+  p = Table(rows=n_rows + 1, cols=n_cols + 1, default=0)
+  w.attach(t)
+  w.attach(p)
+  wait(500)
+
+  for r in range(1, n_rows + 1):
+      for c in range(1, n_cols + 1):
+          a = p.get(r - 1, c)
+          b = p.get(r, c - 1)
+          cc = p.get(r - 1, c - 1)
+          val = a + b - cc + t.get(r - 1, c - 1)
+          t.highlight_cell(r - 1, c - 1, "yellow")
+          p.highlight_cell(r - 1, c, "cyan")
+          p.highlight_cell(r, c - 1, "cyan")
+          p.highlight_cell(r - 1, c - 1, "orange")
+          wait(250)
+          p.set(r, c, val)
+          p.highlight_cell(r, c, "green")
+          wait(250)
+          t.unhighlight_cell(r - 1, c - 1)
+          p.unhighlight_cell(r - 1, c)
+          p.unhighlight_cell(r, c - 1)
+          p.unhighlight_cell(r - 1, c - 1)
+          p.unhighlight_cell(r, c)

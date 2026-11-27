@@ -1,0 +1,173 @@
+id: count-islands
+name: Count islands
+display_name: Подсчёт островов (связных компонент)
+category_id: search
+description_short: BFS по каждой непосещённой 1-клетке, разные цвета для островов
+description_full: Идём по матрице. Встретив 1 в клетке без метки — начинаем BFS от неё, помечаем всю связную
+  компоненту новым id, красим в цвет по кругу (жёлтый, циан, оранж, маджента). таблица t — исходная, label
+  — карта компонент (0 = не посещали, N = id острова).
+complexity: O(N·M)
+icon: 🏝
+order_index: 133
+default_input_data:
+  input_matrix:
+  - - 1
+    - 1
+    - 0
+    - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 0
+  - - 1
+    - 0
+    - 0
+    - 1
+    - 0
+    - 0
+    - 1
+    - 1
+    - 0
+  - - 0
+    - 0
+    - 0
+    - 1
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+  - - 0
+    - 1
+    - 1
+    - 0
+    - 0
+    - 1
+    - 0
+    - 0
+    - 1
+  - - 0
+    - 1
+    - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 1
+    - 1
+  - - 0
+    - 0
+    - 0
+    - 1
+    - 0
+    - 0
+    - 0
+    - 0
+    - 1
+  - - 1
+    - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 1
+    - 0
+    - 0
+  - - 0
+    - 0
+    - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 0
+    - 0
+  - - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 0
+    - 0
+    - 1
+    - 0
+input_schema:
+  input_matrix:
+    type: table
+    constraints:
+      min_rows: 5
+      max_rows: 9
+      min_cols: 5
+      max_cols: 9
+      integer: true
+      min_value: 0
+      max_value: 1
+      label: Сетка (0/1)
+default_settings:
+  speed_factor: 2.0
+definition_mode: python
+definition_python: |
+  w1 = Window("grid")
+  w2 = Window("labels")
+  t = Table(input_matrix)
+  n_rows = t.rows()
+  n_cols = t.cols()
+  label = Table(rows=n_rows, cols=n_cols, default=0)
+  w1.attach(t)
+  w2.attach(label)
+  wait(500)
+
+  colors = [
+      "yellow",
+      "cyan",
+      "orange",
+      "magenta",
+      "lime",
+      "coral",
+      "dodgerblue",
+      "gold",
+      "violet",
+      "turquoise",
+      "tomato",
+      "springgreen",
+  ]
+  island_id = 0
+  stack_r = Vector([])
+  stack_c = Vector([])
+  for r in range(0, n_rows):
+      for c in range(0, n_cols):
+          if t.get(r, c) == 1:
+              if label.get(r, c) == 0:
+                  island_id = island_id + 1
+                  color = colors[(island_id - 1) % 12]
+                  stack_r.append(r)
+                  stack_c.append(c)
+                  while stack_r.size() > 0:
+                      ti = stack_r.size() - 1
+                      rr = stack_r.value_at(ti)
+                      cc = stack_c.value_at(ti)
+                      stack_r.pop()
+                      stack_c.pop()
+                      if label.get(rr, cc) != 0:
+                          continue
+                      label.set(rr, cc, island_id)
+                      t.highlight_cell(rr, cc, color)
+                      wait(60)
+                      if rr > 0:
+                          if t.get(rr - 1, cc) == 1:
+                              stack_r.append(rr - 1)
+                              stack_c.append(cc)
+                      if rr < n_rows - 1:
+                          if t.get(rr + 1, cc) == 1:
+                              stack_r.append(rr + 1)
+                              stack_c.append(cc)
+                      if cc > 0:
+                          if t.get(rr, cc - 1) == 1:
+                              stack_r.append(rr)
+                              stack_c.append(cc - 1)
+                      if cc < n_cols - 1:
+                          if t.get(rr, cc + 1) == 1:
+                              stack_r.append(rr)
+                              stack_c.append(cc + 1)
+                  wait(300)

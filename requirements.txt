@@ -5,4 +5,5 @@ sqlalchemy-serializer
 Flask-WTF
 WTForms
 python-igraph
+PyYAML==6.0.4
 psutil

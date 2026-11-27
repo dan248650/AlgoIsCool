@@ -1,0 +1,104 @@
+id: trapping-rain-water
+name: Trapping rain water
+display_name: Сбор дождевой воды
+category_id: linear
+description_short: 'Три прохода: left_max, right_max, water'
+description_full: 'Проход 1: для каждого i считаем max слева. Проход 2: для каждого i считаем max справа.
+  Проход 3: water[i] = min(left_max[i], right_max[i]) - height[i].'
+complexity: O(n)
+icon: water
+order_index: 90
+default_input_data:
+  input_array:
+  - 0
+  - 1
+  - 0
+  - 2
+  - 1
+  - 0
+  - 1
+  - 3
+  - 2
+  - 1
+  - 2
+  - 1
+input_schema:
+  input_array:
+    type: array
+    constraints:
+      min_length: 3
+      max_length: 12
+      min_value: 0
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w1 = Window("input")
+  w2 = Window("water")
+  w3 = Window("left_max")
+  w4 = Window("right_max")
+  arr = Vector(input_array)
+  lmax = Vector([])
+  rmax = Vector([])
+  wat = Vector([])
+  w1.attach(arr)
+  w2.attach(wat)
+  w3.attach(lmax)
+  w4.attach(rmax)
+  wait(500)
+
+  n = len(input_array)
+
+  # Проход 1: left_max[i] = max(input_array[0..i])
+  cur = 0
+  for i in range(n):
+      arr.highlight(i, "yellow")
+      wait(300)
+      if input_array[i] > cur:
+          cur = input_array[i]
+      lmax.append(cur)
+      lmax.highlight(i, "cyan")
+      arr.unhighlight(i)
+      wait(200)
+      lmax.unhighlight(i)
+
+  # Проход 2: right_max[i] = max(input_array[i..n-1])
+  # Идём справа налево; каждый новый элемент вставляем в начало.
+  cur = 0
+  for k in range(n):
+      i = n - 1 - k
+      arr.highlight(i, "orange")
+      wait(300)
+      if input_array[i] > cur:
+          cur = input_array[i]
+      rmax.insert(0, cur)
+      rmax.highlight(0, "cyan")
+      arr.unhighlight(i)
+      wait(200)
+      rmax.unhighlight(0)
+
+  # Проход 3: water[i] = min(left_max[i], right_max[i]) - input_array[i]
+  total = 0
+  for i in range(n):
+      arr.highlight(i, "yellow")
+      wait(300)
+      lv = lmax.value_at(i)
+      rv = rmax.value_at(i)
+      if lv < rv:
+          m = lv
+      else:
+          m = rv
+      w_i = m - input_array[i]
+      if w_i < 0:
+          w_i = 0
+      total = total + w_i
+      wat.append(w_i)
+      if w_i > 0:
+          arr.highlight(i, "cyan")
+      wat.highlight(i, "green")
+      wait(300)
+      wat.unhighlight(i)
+      if w_i == 0:
+          arr.unhighlight(i)
+
+  wait(1000)

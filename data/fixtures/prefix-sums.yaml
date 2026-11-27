@@ -1,0 +1,46 @@
+id: prefix-sums
+name: Prefix sums
+display_name: Префиксные суммы
+category_id: linear
+description_short: Растущий второй массив с накопленными суммами
+description_full: arr — входной массив, pre — растущий массив префиксных сумм. Каждая новая ячейка = сумма
+  всех элементов от начала до текущего.
+complexity: O(n)
+icon: prefix
+order_index: 70
+default_input_data:
+  input_array:
+  - 1
+  - 3
+  - 2
+  - 5
+  - 4
+  - 6
+  - 2
+input_schema:
+  input_array:
+    type: array
+    constraints:
+      min_length: 3
+      max_length: 12
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  arr = Vector(input_array)
+  pre = Vector([])
+  w.attach(arr)
+  w.attach(pre)
+  wait(500)
+
+  total = 0
+  for i in range(len(input_array)):
+      arr.highlight(i, "yellow")
+      wait(400)
+      total = total + input_array[i]
+      pre.append(total)
+      pre.highlight(i, "green")
+      arr.unhighlight(i)
+      wait(300)
+      pre.unhighlight(i)

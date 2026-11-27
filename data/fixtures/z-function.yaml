@@ -1,0 +1,81 @@
+id: z-function
+name: Z function
+display_name: Z-функция
+category_id: string
+description_short: Z[i] — длина наибольшего общего префикса строки и её суффикса от i
+description_full: Z[i] — длина наибольшего общего префикса строки s и её суффикса s[i..n-1]. Строится
+  за O(n) через «Z-блок» [l, r).
+complexity: O(n)
+icon: Z
+order_index: 101
+default_input_data:
+  input_string: abacaba
+input_schema:
+  input_string:
+    type: string
+    constraints:
+      min_length: 5
+      max_length: 12
+      alphabet: ab
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  s = Vector(input_string)
+  z = Vector([])
+  w.attach(s)
+  w.attach(z)
+  n = len(input_string)
+  for k in range(n):
+      z.append(0)
+  wait(500)
+
+  l = 0
+  r = 0
+  for i in range(1, n):
+      s.highlight(i, "yellow")
+      wait(400)
+
+      if i < r:
+          sym = i - l
+          s.highlight(sym, "cyan")
+          z.highlight(sym, "cyan")
+          wait(300)
+          zi = z.value_at(sym)
+          if r - i < zi:
+              zi = r - i
+          z.set(i, zi)
+          z.highlight(i, "orange")
+          wait(300)
+          s.unhighlight(sym)
+          z.unhighlight(sym)
+          z.unhighlight(i)
+
+      while i + z.value_at(i) < n:
+          left = z.value_at(i)
+          s.highlight(left, "orange")
+          s.highlight(i + left, "orange")
+          wait(300)
+          if s.value_at(left) != s.value_at(i + left):
+              s.highlight(left, "red")
+              s.highlight(i + left, "red")
+              wait(300)
+              s.unhighlight(left)
+              s.unhighlight(i + left)
+              break
+          s.highlight(left, "green")
+          s.highlight(i + left, "green")
+          wait(300)
+          s.unhighlight(left)
+          s.unhighlight(i + left)
+          z.set(i, left + 1)
+
+      if i + z.value_at(i) > r:
+          l = i
+          r = i + z.value_at(i)
+
+      z.highlight(i, "green")
+      s.unhighlight(i)
+      wait(400)
+      z.unhighlight(i)

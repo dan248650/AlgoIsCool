@@ -1,0 +1,123 @@
+id: boyer-moore
+name: Boyer-Moore
+display_name: Поиск подстроки (Boyer-Moore)
+category_id: string
+description_short: Поиск подстроки через bad-character эвристику
+description_full: 'Сравнение с конца паттерна. При несовпадении символ text[i+j] ищется в таблице bad_char
+  (последняя позиция в паттерне); паттерн сдвигается на j − bc[c] (или j+1, если символа нет). Четыре
+  структуры: text, pattern, bc_keys, bc_vals.'
+complexity: O(n·m) худший, O(n/m) средний
+icon: BM
+order_index: 104
+default_input_data:
+  input_text: abcabcabd
+  input_pattern: abcab
+input_schema:
+  input_text:
+    type: string
+    constraints:
+      min_length: 8
+      max_length: 14
+      alphabet: abcd
+  input_pattern:
+    type: string
+    constraints:
+      min_length: 3
+      max_length: 6
+      alphabet: abcd
+default_settings:
+  speed_factor: 1.0
+definition_mode: python
+definition_python: |
+  w = Window("main")
+  text = Vector(input_text)
+  pattern = Vector(input_pattern)
+  bc_keys = Vector([])
+  bc_vals = Vector([])
+  w.attach(text)
+  w.attach(pattern)
+  w.attach(bc_keys)
+  w.attach(bc_vals)
+  n = len(input_text)
+  m = len(input_pattern)
+  wait(400)
+
+  # Фаза 1: bad_char таблица
+  for i in range(m):
+      pattern.highlight(i, "yellow")
+      wait(300)
+      ch = pattern.value_at(i)
+      found = -1
+      for k in range(bc_keys.size()):
+          bc_keys.highlight(k, "cyan")
+          bc_vals.highlight(k, "cyan")
+          wait(200)
+          if bc_keys.value_at(k) == ch:
+              found = k
+              bc_keys.unhighlight(k)
+              bc_vals.unhighlight(k)
+              break
+          bc_keys.unhighlight(k)
+          bc_vals.unhighlight(k)
+      if found == -1:
+          bc_keys.append(ch)
+          bc_vals.append(i)
+          bc_keys.highlight(bc_keys.size() - 1, "green")
+          bc_vals.highlight(bc_vals.size() - 1, "green")
+          wait(300)
+      else:
+          bc_vals.set(found, i)
+          bc_vals.highlight(found, "green")
+          wait(300)
+      # Сброс всей подсветки таблицы после итерации —
+      # иначе cyan/зелёный копится и остаётся до конца алгоритма.
+      for k2 in range(bc_keys.size()):
+          bc_keys.unhighlight(k2)
+          bc_vals.unhighlight(k2)
+      pattern.unhighlight(i)
+
+  # Фаза 2: поиск
+  i = 0
+  while i <= n - m:
+      j = m - 1
+      while j >= 0:
+          text.highlight(i + j, "yellow")
+          pattern.highlight(j, "yellow")
+          wait(300)
+          if text.value_at(i + j) != pattern.value_at(j):
+              text.highlight(i + j, "red")
+              pattern.highlight(j, "red")
+              wait(400)
+              text.unhighlight(i + j)
+              pattern.unhighlight(j)
+              break
+          text.unhighlight(i + j)
+          pattern.unhighlight(j)
+          j = j - 1
+      if j < 0:
+          for s2 in range(m):
+              text.highlight(i + s2, "green")
+          wait(500)
+          i = i + 1
+      else:
+          c = text.value_at(i + j)
+          found = -1
+          for k in range(bc_keys.size()):
+              bc_keys.highlight(k, "cyan")
+              wait(150)
+              if bc_keys.value_at(k) == c:
+                  found = k
+                  bc_vals.highlight(k, "cyan")
+                  wait(300)
+                  bc_keys.unhighlight(k)
+                  bc_vals.unhighlight(k)
+                  break
+              bc_keys.unhighlight(k)
+          if found == -1:
+              shift = j + 1
+          else:
+              shift = j - bc_vals.value_at(found)
+          if shift < 1:
+              shift = 1
+          i = i + shift
+          wait(300)
