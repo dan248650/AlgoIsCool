@@ -635,12 +635,11 @@ def add_tree_bfs():
 
 def add_prefix_sums():
     python_code = (
-        'w1 = Window("input")\n'
-        'w2 = Window("prefix")\n'
+        'w = Window("main")\n'
         'arr = Vector(input_array)\n'
         'pre = Vector([])\n'
-        'w1.attach(arr)\n'
-        'w2.attach(pre)\n'
+        'w.attach(arr)\n'
+        'w.attach(pre)\n'
         'wait(500)\n'
         '\n'
         'total = 0\n'
@@ -664,7 +663,7 @@ def add_prefix_sums():
         display_name="Префиксные суммы",
         category_id="linear",
         description_short="Растущий второй массив с накопленными суммами",
-        description_full="Слева — входной массив, справа — растущий массив префиксных сумм. Каждая новая ячейка = сумма всех элементов от начала до текущего.",
+        description_full="arr — входной массив, pre — растущий массив префиксных сумм. Каждая новая ячейка = сумма всех элементов от начала до текущего.",
         complexity="O(n)",
         icon="prefix",
         order_index=70,
@@ -684,12 +683,11 @@ def add_prefix_sums():
 
 def add_suffix_sums():
     python_code = (
-        'w1 = Window("input")\n'
-        'w2 = Window("suffix")\n'
+        'w = Window("main")\n'
         'arr = Vector(input_array)\n'
         'suf = Vector([])\n'
-        'w1.attach(arr)\n'
-        'w2.attach(suf)\n'
+        'w.attach(arr)\n'
+        'w.attach(suf)\n'
         'wait(500)\n'
         '\n'
         'total = 0\n'
@@ -715,7 +713,7 @@ def add_suffix_sums():
         display_name="Суффиксные суммы",
         category_id="linear",
         description_short="Растущий второй массив с суффиксными суммами",
-        description_full="Слева — входной массив, справа — растущий массив суффиксных сумм. Обрабатываем справа налево; каждая новая ячейка = сумма всех элементов от текущего до конца.",
+        description_full="arr — входной массив, suf — растущий массив суффиксных сумм. Обрабатываем справа налево; каждая новая ячейка = сумма всех элементов от текущего до конца.",
         complexity="O(n)",
         icon="suffix",
         order_index=75,
@@ -2175,6 +2173,474 @@ def add_lps():
         default_input_data=default_input,
         input_schema={
             "input_string": {"type": "string", "constraints": {"min_length": 4, "max_length": 16, "alphabet": "abcdef"}}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+# ============================================================
+# Matrix multiplication
+# ============================================================
+
+def add_matrix_multiplication():
+    python_code = (
+        'w = Window("main")\n'
+        'A = Table(input_matrix_a)\n'
+        'B = Table(input_matrix_b)\n'
+        'n = len(input_matrix_a)\n'
+        'm = len(input_matrix_a[0])\n'
+        'k = len(input_matrix_b[0])\n'
+        'C = Table(rows=n, cols=k, default=0)\n'
+        'w.attach(A)\n'
+        'w.attach(B)\n'
+        'w.attach(C)\n'
+        'wait(500)\n'
+        '\n'
+        'for r in range(0, n):\n'
+        '    for cc in range(0, k):\n'
+        '        C.highlight_row(r, "yellow")\n'
+        '        C.highlight_col(cc, "cyan")\n'
+        '        wait(200)\n'
+        '        total = 0\n'
+        '        for j in range(0, m):\n'
+        '            A.highlight_cell(r, j, "orange")\n'
+        '            B.highlight_cell(j, cc, "orange")\n'
+        '            wait(150)\n'
+        '            total = total + A.get(r, j) * B.get(j, cc)\n'
+        '            A.unhighlight_cell(r, j)\n'
+        '            B.unhighlight_cell(j, cc)\n'
+        '        C.set(r, cc, total)\n'
+        '        C.highlight_cell(r, cc, "green")\n'
+        '        wait(300)\n'
+        '        C.unhighlight_row(r)\n'
+        '        C.unhighlight_col(cc)\n'
+        '        C.unhighlight_cell(r, cc)\n'
+    )
+    default_input = {
+        "input_matrix_a": [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+        "input_matrix_b": [[2, 0, 1], [1, 3, 0], [0, 1, 2]],
+    }
+    default_settings = {"speed_factor": 2.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="matrix-multiplication",
+        name="Matrix multiplication",
+        display_name="Умножение матриц",
+        category_id="search",
+        description_short="C[r][cc] = сумма A[r][j] · B[j][cc]",
+        description_full="Каждая клетка результирующей матрицы C — скалярное произведение строки r матрицы A на столбец cc матрицы B. При вычислении C[r][cc] подсвечивается строка r в A и столбец cc в B, затем идёт по j от 0 до m-1, умножая пары. Требование: число столбцов A = числу строк B.",
+        complexity="O(n·m·k)",
+        icon="×",
+        order_index=130,
+        default_input_data=default_input,
+        input_schema={
+            "input_matrix_a": {"type": "table", "constraints": {
+                "min_rows": 2, "max_rows": 4, "min_cols": 2, "max_cols": 4,
+                "integer": True, "min_value": -9, "max_value": 9,
+                "label": "Матрица A"
+            }},
+            "input_matrix_b": {
+                "type": "table",
+                "constraints": {
+                    "min_rows": 2, "max_rows": 4, "min_cols": 2, "max_cols": 4,
+                    "integer": True, "min_value": -9, "max_value": 9,
+                    "label": "Матрица B (число строк = числу столбцов A)",
+                },
+                "depends_on": {"field": "input_matrix_a", "mode": "rows_equal_cols_of"},
+            }
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+# ============================================================
+# Flood fill
+# ============================================================
+
+def add_flood_fill():
+    python_code = (
+        'w = Window("main")\n'
+        't = Table(input_matrix)\n'
+        'w.attach(t)\n'
+        'wait(500)\n'
+        '\n'
+        'n_rows = t.rows()\n'
+        'n_cols = t.cols()\n'
+        'sr = start_r\n'
+        'sc = start_c\n'
+        'if sr < 0:\n'
+        '    sr = 0\n'
+        'if sr >= n_rows:\n'
+        '    sr = n_rows - 1\n'
+        'if sc < 0:\n'
+        '    sc = 0\n'
+        'if sc >= n_cols:\n'
+        '    sc = n_cols - 1\n'
+        '\n'
+        'if t.get(sr, sc) == new_color:\n'
+        '    found = False\n'
+        '    for rr in range(0, n_rows):\n'
+        '        if not found:\n'
+        '            for cc in range(0, n_cols):\n'
+        '                if t.get(rr, cc) != new_color:\n'
+        '                    sr = rr\n'
+        '                    sc = cc\n'
+        '                    found = True\n'
+        '                    break\n'
+        '\n'
+        'old_color = t.get(sr, sc)\n'
+        'if old_color == new_color:\n'
+        '    wait(300)\n'
+        'else:\n'
+        '    stack_r = Vector([])\n'
+        '    stack_c = Vector([])\n'
+        '    stack_r.append(sr)\n'
+        '    stack_c.append(sc)\n'
+        '    while stack_r.size() > 0:\n'
+        '        ti = stack_r.size() - 1\n'
+        '        r = stack_r.value_at(ti)\n'
+        '        c = stack_c.value_at(ti)\n'
+        '        stack_r.pop()\n'
+        '        stack_c.pop()\n'
+        '        if t.get(r, c) != old_color:\n'
+        '            continue\n'
+        '        t.set(r, c, new_color)\n'
+        '        t.highlight_cell(r, c, "green")\n'
+        '        wait(60)\n'
+        '        if r > 0:\n'
+        '            if t.get(r - 1, c) == old_color:\n'
+        '                stack_r.append(r - 1)\n'
+        '                stack_c.append(c)\n'
+        '        if r < n_rows - 1:\n'
+        '            if t.get(r + 1, c) == old_color:\n'
+        '                stack_r.append(r + 1)\n'
+        '                stack_c.append(c)\n'
+        '        if c > 0:\n'
+        '            if t.get(r, c - 1) == old_color:\n'
+        '                stack_r.append(r)\n'
+        '                stack_c.append(c - 1)\n'
+        '        if c < n_cols - 1:\n'
+        '            if t.get(r, c + 1) == old_color:\n'
+        '                stack_r.append(r)\n'
+        '                stack_c.append(c + 1)\n'
+    )
+    default_input = {
+        "input_matrix": [
+            [0, 0, 0, 1, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 1, 1],
+            [0, 0, 0, 0, 1, 1, 0, 1, 1],
+            [0, 0, 0, 1, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 1, 1, 1],
+            [1, 1, 0, 0, 0, 0, 0, 1, 1],
+            [1, 1, 1, 0, 0, 0, 1, 1, 1],
+            [1, 0, 0, 1, 0, 1, 1, 0, 1],
+            [0, 0, 1, 1, 1, 1, 0, 0, 1],
+        ],
+        "start_r": 0,
+        "start_c": 0,
+        "new_color": 2,
+    }
+    default_settings = {"speed_factor": 2.5}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="flood-fill",
+        name="Flood fill",
+        display_name="Заливка области (Flood fill)",
+        category_id="search",
+        description_short="Смена цвета связной области через стек (DFS)",
+        description_full="Начинаем с клетки (start_r, start_c). Кладём её в стек. Пока стек не пуст: берём клетку, если её цвет = old_color — красим в new_color и добавляем соседей в стек. Классика заливки (как в Paint).",
+        complexity="O(N·M)",
+        icon="🌊",
+        order_index=131,
+        default_input_data=default_input,
+        input_schema={
+            "input_matrix": {"type": "table", "constraints": {
+                "min_rows": 5, "max_rows": 9, "min_cols": 5, "max_cols": 9,
+                "integer": True, "min_value": 0, "max_value": 5,
+                "label": "Сетка"
+            }},
+            "start_r": {"type": "number", "constraints": {
+                "min": 0, "max": 8, "nonnegative": True, "label": "Стартовая строка"
+            }},
+            "start_c": {"type": "number", "constraints": {
+                "min": 0, "max": 8, "nonnegative": True, "label": "Стартовый столбец"
+            }},
+            "new_color": {"type": "number", "constraints": {
+                "min": 0, "max": 9, "nonnegative": True, "label": "Новый цвет"
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+# ============================================================
+# Game of Life
+# ============================================================
+
+def add_game_of_life():
+    python_code = (
+        'w = Window("main")\n'
+        't = Table(input_matrix)\n'
+        'snap = Table(input_matrix)\n'
+        'w.attach(t)\n'
+        'wait(500)\n'
+        '\n'
+        'n = t.rows()\n'
+        'm = t.cols()\n'
+        '\n'
+        'for gen in range(0, 4):\n'
+        '    for r in range(0, n):\n'
+        '        for c in range(0, m):\n'
+        '            snap.set(r, c, t.get(r, c))\n'
+        '    for r in range(0, n):\n'
+        '        for c in range(0, m):\n'
+        '            cnt = 0\n'
+        '            for dr in range(-1, 2):\n'
+        '                for dc in range(-1, 2):\n'
+        '                    if dr == 0:\n'
+        '                        if dc == 0:\n'
+        '                            continue\n'
+        '                    nr = r + dr\n'
+        '                    nc = c + dc\n'
+        '                    if nr >= 0 and nr < n and nc >= 0 and nc < m:\n'
+        '                        if snap.get(nr, nc) == 1:\n'
+        '                            cnt = cnt + 1\n'
+        '            old = snap.get(r, c)\n'
+        '            nv = 0\n'
+        '            if old == 1:\n'
+        '                if cnt == 2: nv = 1\n'
+        '                if cnt == 3: nv = 1\n'
+        '            else:\n'
+        '                if cnt == 3: nv = 1\n'
+        '            t.set(r, c, nv)\n'
+        '            if nv == 1:\n'
+        '                t.highlight_cell(r, c, "green")\n'
+        '            else:\n'
+        '                t.highlight_cell(r, c, "orange")\n'
+        '    wait(800)\n'
+        '    for r in range(0, n):\n'
+        '        for c in range(0, m):\n'
+        '            t.unhighlight_cell(r, c)\n'
+        '    wait(200)\n'
+    )
+    default_input = {"input_matrix": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+    ]}
+    default_settings = {"speed_factor": 2.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="game-of-life",
+        name="Game of Life",
+        display_name="Игра «Жизнь» (Conway)",
+        category_id="search",
+        description_short="Клеточный автомат: 4 поколения по правилам 23/3",
+        description_full="Правила: живая клетка выживает при 2–3 живых соседях, мёртвая оживает при ровно 3. Каждое поколение — проход по всем клеткам по снимку предыдущего состояния. Зелёный — живые, оранжевый — мёртвые. 4 поколения.",
+        complexity="O(G·NM)",
+        icon="🦠",
+        order_index=132,
+        default_input_data=default_input,
+        input_schema={
+            "input_matrix": {"type": "table", "constraints": {
+                "min_rows": 5, "max_rows": 7, "min_cols": 5, "max_cols": 7,
+                "integer": True, "min_value": 0, "max_value": 1,
+                "label": "Сетка (0/1)"
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+# ============================================================
+# Count islands
+# ============================================================
+
+def add_count_islands():
+    python_code = (
+        'w1 = Window("grid")\n'
+        'w2 = Window("labels")\n'
+        't = Table(input_matrix)\n'
+        'n_rows = t.rows()\n'
+        'n_cols = t.cols()\n'
+        'label = Table(rows=n_rows, cols=n_cols, default=0)\n'
+        'w1.attach(t)\n'
+        'w2.attach(label)\n'
+        'wait(500)\n'
+        '\n'
+        'colors = [\n'
+        '    "yellow",\n'
+        '    "cyan",\n'
+        '    "orange",\n'
+        '    "magenta",\n'
+        '    "lime",\n'
+        '    "coral",\n'
+        '    "dodgerblue",\n'
+        '    "gold",\n'
+        '    "violet",\n'
+        '    "turquoise",\n'
+        '    "tomato",\n'
+        '    "springgreen",\n'
+        ']\n'
+        'island_id = 0\n'
+        'stack_r = Vector([])\n'
+        'stack_c = Vector([])\n'
+        'for r in range(0, n_rows):\n'
+        '    for c in range(0, n_cols):\n'
+        '        if t.get(r, c) == 1:\n'
+        '            if label.get(r, c) == 0:\n'
+        '                island_id = island_id + 1\n'
+        '                color = colors[(island_id - 1) % 12]\n'
+        '                stack_r.append(r)\n'
+        '                stack_c.append(c)\n'
+        '                while stack_r.size() > 0:\n'
+        '                    ti = stack_r.size() - 1\n'
+        '                    rr = stack_r.value_at(ti)\n'
+        '                    cc = stack_c.value_at(ti)\n'
+        '                    stack_r.pop()\n'
+        '                    stack_c.pop()\n'
+        '                    if label.get(rr, cc) != 0:\n'
+        '                        continue\n'
+        '                    label.set(rr, cc, island_id)\n'
+        '                    t.highlight_cell(rr, cc, color)\n'
+        '                    wait(60)\n'
+        '                    if rr > 0:\n'
+        '                        if t.get(rr - 1, cc) == 1:\n'
+        '                            stack_r.append(rr - 1)\n'
+        '                            stack_c.append(cc)\n'
+        '                    if rr < n_rows - 1:\n'
+        '                        if t.get(rr + 1, cc) == 1:\n'
+        '                            stack_r.append(rr + 1)\n'
+        '                            stack_c.append(cc)\n'
+        '                    if cc > 0:\n'
+        '                        if t.get(rr, cc - 1) == 1:\n'
+        '                            stack_r.append(rr)\n'
+        '                            stack_c.append(cc - 1)\n'
+        '                    if cc < n_cols - 1:\n'
+        '                        if t.get(rr, cc + 1) == 1:\n'
+        '                            stack_r.append(rr)\n'
+        '                            stack_c.append(cc + 1)\n'
+        '                wait(300)\n'
+    )
+    default_input = {"input_matrix": [
+        [1, 1, 0, 0, 0, 1, 1, 0, 0],
+        [1, 0, 0, 1, 0, 0, 1, 1, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 1, 0, 0, 1],
+        [0, 1, 0, 0, 1, 1, 0, 1, 1],
+        [0, 0, 0, 1, 0, 0, 0, 0, 1],
+        [1, 0, 0, 1, 1, 0, 1, 0, 0],
+        [0, 0, 0, 0, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 0, 0, 0, 1, 0],
+    ]}
+    default_settings = {"speed_factor": 2.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="count-islands",
+        name="Count islands",
+        display_name="Подсчёт островов (связных компонент)",
+        category_id="search",
+        description_short="BFS по каждой непосещённой 1-клетке, разные цвета для островов",
+        description_full="Идём по матрице. Встретив 1 в клетке без метки — начинаем BFS от неё, помечаем всю связную компоненту новым id, красим в цвет по кругу (жёлтый, циан, оранж, маджента). таблица t — исходная, label — карта компонент (0 = не посещали, N = id острова).",
+        complexity="O(N·M)",
+        icon="🏝",
+        order_index=133,
+        default_input_data=default_input,
+        input_schema={
+            "input_matrix": {"type": "table", "constraints": {
+                "min_rows": 5, "max_rows": 9, "min_cols": 5, "max_cols": 9,
+                "integer": True, "min_value": 0, "max_value": 1,
+                "label": "Сетка (0/1)"
+            }}
+        },
+        default_settings=default_settings,
+        definition=definition,
+        definition_python=python_code,
+        definition_mode='python',
+    )
+
+
+# ============================================================
+# 2D prefix sums
+# ============================================================
+
+def add_prefix_sums_2d():
+    python_code = (
+        'w = Window("main")\n'
+        't = Table(input_matrix)\n'
+        'n_rows = len(input_matrix)\n'
+        'n_cols = len(input_matrix[0])\n'
+        'p = Table(rows=n_rows + 1, cols=n_cols + 1, default=0)\n'
+        'w.attach(t)\n'
+        'w.attach(p)\n'
+        'wait(500)\n'
+        '\n'
+        'for r in range(1, n_rows + 1):\n'
+        '    for c in range(1, n_cols + 1):\n'
+        '        a = p.get(r - 1, c)\n'
+        '        b = p.get(r, c - 1)\n'
+        '        cc = p.get(r - 1, c - 1)\n'
+        '        val = a + b - cc + t.get(r - 1, c - 1)\n'
+        '        t.highlight_cell(r - 1, c - 1, "yellow")\n'
+        '        p.highlight_cell(r - 1, c, "cyan")\n'
+        '        p.highlight_cell(r, c - 1, "cyan")\n'
+        '        p.highlight_cell(r - 1, c - 1, "orange")\n'
+        '        wait(250)\n'
+        '        p.set(r, c, val)\n'
+        '        p.highlight_cell(r, c, "green")\n'
+        '        wait(250)\n'
+        '        t.unhighlight_cell(r - 1, c - 1)\n'
+        '        p.unhighlight_cell(r - 1, c)\n'
+        '        p.unhighlight_cell(r, c - 1)\n'
+        '        p.unhighlight_cell(r - 1, c - 1)\n'
+        '        p.unhighlight_cell(r, c)\n'
+    )
+    default_input = {"input_matrix": [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 16],
+    ]}
+    default_settings = {"speed_factor": 2.0}
+    definition = _build_definition(python_code, default_input, default_settings)
+
+    return Algorithm(
+        id="prefix-sums-2d",
+        name="2D prefix sums",
+        display_name="Двумерные префиксные суммы",
+        category_id="search",
+        description_short="p[r][c] = сумма input[0..r-1][0..c-1] за O(1) на клетку",
+        description_full="p[i][j] = p[i-1][j] + p[i][j-1] - p[i-1][j-1] + input[i-1][j-1]. Каждая клетка результирующей таблицы — сумма прямоугольника от (0,0) до (i-1,j-1). таблица t — исходная, p — префиксные суммы (размер +1 к каждой стороне, нулевая строка и столбец для удобства).",
+        complexity="O(N·M)",
+        icon="Σ",
+        order_index=134,
+        default_input_data=default_input,
+        input_schema={
+            "input_matrix": {"type": "table", "constraints": {
+                "min_rows": 3, "max_rows": 6, "min_cols": 3, "max_cols": 6,
+                "integer": True, "min_value": -20, "max_value": 20,
+                "label": "Матрица"
+            }}
         },
         default_settings=default_settings,
         definition=definition,

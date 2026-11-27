@@ -37,6 +37,11 @@ from data.algorithm import (
     add_knapsack,
     add_matrix_chain,
     add_lps,
+    add_matrix_multiplication,
+    add_flood_fill,
+    add_game_of_life,
+    add_count_islands,
+    add_prefix_sums_2d,
 )
 from data.category import init_categories
 
@@ -138,6 +143,11 @@ def init_algorithms():
     update_or_create(add_knapsack)
     update_or_create(add_matrix_chain)
     update_or_create(add_lps)
+    update_or_create(add_matrix_multiplication)
+    update_or_create(add_flood_fill)
+    update_or_create(add_game_of_life)
+    update_or_create(add_count_islands)
+    update_or_create(add_prefix_sums_2d)
     db.session.commit()
 
 

@@ -268,7 +268,7 @@ export class InputFormHandler {
         return null;
     }
 
-    _validateTable(value, c) {
+    _validateTable(value, c, dependsValue, depSpec) {
         if (!Array.isArray(value)) return 'должно быть списком строк';
         if (value.length === 0) return null;
         if (c.min_rows !== undefined && value.length < c.min_rows) return `минимум ${c.min_rows} строк`;
@@ -291,6 +291,14 @@ export class InputFormHandler {
             }
             if (c.max_value !== undefined && value[i].some(v => v > c.max_value)) {
                 return `строка ${i}: значения должны быть <= ${c.max_value}`;
+            }
+        }
+        if (depSpec && Array.isArray(dependsValue) && dependsValue.length > 0) {
+            const srcWidth = Array.isArray(dependsValue[0]) ? dependsValue[0].length : 0;
+            if (depSpec.mode === 'rows_equal_cols_of') {
+                if (value.length !== srcWidth) {
+                    return `число строк должно совпадать с числом столбцов «${depSpec.field}» (${srcWidth})`;
+                }
             }
         }
         return null;
@@ -385,7 +393,7 @@ export class InputFormHandler {
         if (type === 'string') return this._validateString(value, c);
         if (type === 'graph_nodes') return this._validateGraphNodes(value, c);
         if (type === 'graph_edges') return this._validateGraphEdges(value, c, dependsValue);
-        if (type === 'table') return this._validateTable(value, c);
+        if (type === 'table') return this._validateTable(value, c, dependsValue, depSpec);
         return null;
     }
 
@@ -605,9 +613,17 @@ export class InputFormHandler {
         return edges;
     }
 
-    _generateTable(c) {
-        const rows = Math.floor(Math.random() * ((c.max_rows ?? 4) - (c.min_rows ?? 3) + 1)) + (c.min_rows ?? 3);
-        const cols = Math.floor(Math.random() * ((c.max_cols ?? 4) - (c.min_cols ?? 3) + 1)) + (c.min_cols ?? 3);
+    _generateTable(c, dependsValue, depSpec) {
+        let rows, cols;
+        if (depSpec && depSpec.mode === 'rows_equal_cols_of'
+            && Array.isArray(dependsValue) && dependsValue.length > 0) {
+            const srcWidth = Array.isArray(dependsValue[0]) ? dependsValue[0].length : 0;
+            rows = srcWidth;
+            cols = Math.floor(Math.random() * ((c.max_cols ?? 4) - (c.min_cols ?? 2) + 1)) + (c.min_cols ?? 2);
+        } else {
+            rows = Math.floor(Math.random() * ((c.max_rows ?? 4) - (c.min_rows ?? 3) + 1)) + (c.min_rows ?? 3);
+            cols = Math.floor(Math.random() * ((c.max_cols ?? 4) - (c.min_cols ?? 3) + 1)) + (c.min_cols ?? 3);
+        }
         const minV = c.min_value ?? 0;
         const maxV = c.max_value ?? 9;
         const out = [];
@@ -640,7 +656,7 @@ export class InputFormHandler {
                 else if (spec.type === 'number') randomData[field] = this._generateNumber(field, c, dep, depSpec);
                 else if (spec.type === 'boolean') randomData[field] = Math.random() < 0.5;
                 else if (spec.type === 'string') randomData[field] = this._generateString(c);
-                else if (spec.type === 'table') randomData[field] = this._generateTable(c);
+                else if (spec.type === 'table') randomData[field] = this._generateTable(c, dep, depSpec);
 
                 delete pending[field];
                 progressed = true;

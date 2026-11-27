@@ -111,6 +111,27 @@ class BaseInterpreter:
     def _evaluate_expression(self, expr: str, state: Dict) -> Any:
         expr = expr.strip()
 
+        # Снятие внешних скобок: (expr) → expr
+        if expr.startswith('(') and expr.endswith(')'):
+            depth = 0
+            wrapped = True
+            for i, ch in enumerate(expr):
+                if ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth -= 1
+                    if depth == 0 and i < len(expr) - 1:
+                        wrapped = False
+                        break
+            if wrapped and len(expr) > 1:
+                return self._evaluate_expression(expr[1:-1].strip(), state)
+
+        # Строковый литерал
+        if len(expr) >= 2 and expr[0] in ('"', "'") and expr[-1] == expr[0]:
+            inner = expr[1:-1]
+            if expr[0] not in inner:
+                return inner
+
         # Литерал списка
         if expr.startswith('[') and expr.endswith(']'):
             inner = expr[1:-1].strip()
@@ -191,10 +212,7 @@ class BaseInterpreter:
         except ValueError:
             pass
 
-        # Разбиваем по оператору на верхнем уровне скобок.
-        # rsplit('-', 1) на 'cap - input_weights[i - 1]' режет по
-        # последнему '-', который ВНУТРИ [...], и ломает выражение.
-        # Приоритет: сначала +- (низкий), потом */ (высокий).
+        # Приоритет 1: + - (низкий)
         idx = self._find_top_level_op(expr, '+-')
         if idx > 0:
             ch = expr[idx]
@@ -211,7 +229,26 @@ class BaseInterpreter:
                 if isinstance(left, (int, float)) and isinstance(right, (int, float)):
                     return left - right
 
-        idx = self._find_top_level_op(expr, '*/')
+        # Приоритет 2: // (двухсимвольный, ищем РАНЬШЕ * и /)
+        depth = 0
+        idx_floor = -1
+        for i in range(len(expr) - 1, -1, -1):
+            c = expr[i]
+            if c in ')]}':
+                depth += 1
+            elif c in '([{':
+                depth -= 1
+            elif depth == 0 and i + 1 < len(expr) and expr[i:i + 2] == '//':
+                idx_floor = i
+                break
+        if idx_floor > 0:
+            left = self._evaluate_expression(expr[:idx_floor].strip(), state)
+            right = self._evaluate_expression(expr[idx_floor + 2:].strip(), state)
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)) and right != 0:
+                return left // right
+
+        # Приоритет 3: % * / (односимвольные, справа налево)
+        idx = self._find_top_level_op(expr, '%*/')
         if idx > 0:
             ch = expr[idx]
             left = self._evaluate_expression(expr[:idx].strip(), state)
@@ -226,6 +263,9 @@ class BaseInterpreter:
             elif ch == '/':
                 if isinstance(left, (int, float)) and isinstance(right, (int, float)) and right != 0:
                     return left / right
+            elif ch == '%':
+                if isinstance(left, (int, float)) and isinstance(right, (int, float)) and right != 0:
+                    return left % right
 
         # Доступ по индексу: сначала простой случай arr[i]
         # (в индексе допускаются отрицательные значения — arr[-1]).
@@ -402,6 +442,22 @@ class BaseInterpreter:
 
     def _evaluate_condition(self, condition: str, state: Dict) -> bool:
         condition = condition.strip()
+
+        # Снятие внешних скобок, если они обнимают выражение целиком
+        if len(condition) >= 2 and condition[0] == '(' and condition[-1] == ')':
+            depth = 0
+            wraps_whole = True
+            for i, ch in enumerate(condition):
+                if ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth -= 1
+                    if depth == 0:
+                        if i != len(condition) - 1:
+                            wraps_whole = False
+                        break
+            if wraps_whole:
+                return self._evaluate_condition(condition[1:-1], state)
 
         # Логические операторы. Порядок важен:
         #   ' or ' / ' and ' проверяем РАНЬШЕ, чем ' in ' / ' not in ',

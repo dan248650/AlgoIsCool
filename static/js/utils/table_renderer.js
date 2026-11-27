@@ -7,7 +7,7 @@ export class TableRenderer extends BaseRenderer {
                 this.createTable(command.params);
                 break;
             case 'update_cell':
-                await this.updateCell(command.params, skipAnimation);
+                this.updateCell(command.params, skipAnimation);
                 break;
             case 'highlight_cell':
             case 'unhighlight_cell':
@@ -132,12 +132,7 @@ export class TableRenderer extends BaseRenderer {
         this.updateLayout();
     }
 
-    // ---------- update_cell (изменение значения) ----------
-    // Здесь await нужен: значение меняется, вспышка фона, потом
-    // возвращаемся. Это не конфликтует с подсветкой — update_cell
-    // обычно идёт отдельной командой между wait.
-
-    async updateCell(params, skipAnimation = false) {
+    updateCell(params, skipAnimation = false) {
         const { row, col, value } = params;
         const el = this.elements.get(`cell_${row}_${col}`);
         if (!el) return;
@@ -145,12 +140,10 @@ export class TableRenderer extends BaseRenderer {
         if (valueDiv) valueDiv.textContent = value;
         if (skipAnimation) return;
 
-        const actualDuration = 300 / this.settings.speedFactor;
-        valueDiv.style.transition = `background-color ${actualDuration}ms ease`;
+        const d = 300 / this.settings.speedFactor;
+        valueDiv.style.transition = `background-color ${d}ms ease`;
         valueDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-        await this.sleep(actualDuration);
-        valueDiv.style.backgroundColor = '';
-        valueDiv.style.transition = '';
+        setTimeout(() => { valueDiv.style.backgroundColor = ''; }, d);
     }
 
     // ---------- highlight_cell / unhighlight_cell ----------
